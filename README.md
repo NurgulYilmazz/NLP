@@ -102,7 +102,7 @@ Yapay zekâ analizinden gelen yön bilgisi:
 ![Borsa simülasyonu](images/NewsDashboard.png)
 
 
-### Haber Ekranı
+### Api Key Anahtarı
 
 ![Borsa simülasyonu](images/GrokApiKeyModal.png)
 
