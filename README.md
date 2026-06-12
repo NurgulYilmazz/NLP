@@ -83,13 +83,28 @@ Yapay zekâ analizinden gelen yön bilgisi:
 - Negatif haber: `-1`
 - Nötr haber: `0`
 
-## Proje Görseli
+## Proje Görselleri
 
-Proje ekran görüntüsü eklendiğinde aşağıdaki alanda görüntülenecektir:
+### Ana Ekran
 
-```markdown
-![NarrativeFlow ekran görüntüsü](images/narrativeflow-ekran-goruntusu.png)
-```
+![NarrativeFlow ana ekran](images/HomePage.png)
+
+### Analiz Sonucu
+
+![Sentiment analiz sonucu](images/dashboard.png)
+
+### Tahmin Ekranı
+
+![Borsa simülasyonu](images/GuessDashboard.png)
+
+### Haber Ekranı
+
+![Borsa simülasyonu](images/NewsDashboard.png)
+
+
+### Haber Ekranı
+
+![Borsa simülasyonu](images/GrokApiKeyModal.png)
 
 ## Projeyi Çalıştırma
 
