@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NarrativeFlow — Küresel Anlatı Analizi</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:       #07090f;
+  --bg1:      #0b0f1a;
+  --bg2:      #0f1525;
+  --surface:  #131c2e;
+  --surf2:    #182238;
+  --border:   #1e2d47;
+  --border2:  #26394f;
+  --border3:  #2e4563;
+  --text:     #8faac8;
+  --text2:    #4a6480;
+  --bright:   #d8eaf8;
+  --accent:   #3b9eff;
+  --accent2:  #1a6fd4;
+  --pos:      #22c987;
+  --pos2:     #0f7a50;
+  --neg:      #f0476c;
+  --neg2:     #8a1a30;
+  --warn:     #f5a623;
+  --warn2:    #8a5800;
+  --purple:   #9d7af0;
+  --purple2:  #5a3fa0;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:12px;line-height:1.5}
+
+/* scrollbar */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border3);border-radius:2px}
+
+/* ── TICKER TAPE ── */
+.ticker-wrap{
+  height:28px;background:var(--bg1);border-bottom:1px solid var(--border);
+  overflow:hidden;flex-shrink:0;display:flex;align-items:center;
+  position:relative;z-index:9;
+}
+.ticker-inner{
+  display:flex;gap:0;white-space:nowrap;
+  animation:tickerScroll 50s linear infinite;
+  padding-left:100%;
+}
+.ticker-wrap:hover .ticker-inner{animation-play-state:paused}
+@keyframes tickerScroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+.t-item{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:0 18px;border-right:1px solid var(--border);height:28px;
+  font-size:10px;letter-spacing:.3px;
+}
+.t-sym{color:var(--bright);font-weight:700;font-size:10px}
+.t-px{color:var(--text)}
+.t-chg{font-size:10px;font-weight:600}
+.t-chg.pos{color:var(--pos)} .t-chg.neg{color:var(--neg)}
+.t-sep{color:var(--border3);margin:0 2px}
+
+/* ── HEADER ── */
+.hdr{
+  height:52px;background:var(--bg1);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;flex-shrink:0;position:relative;z-index:10;
+}
+.logo{
+  font-family:var(--mono);font-weight:700;font-size:15px;
+  color:var(--bright);letter-spacing:-.3px;display:flex;align-items:center;gap:10px;
+}
+.logo-tag{
+  font-size:8px;letter-spacing:2px;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--accent2),var(--purple2));
+  color:#fff;padding:3px 8px;border-radius:2px;font-weight:600;
+}
+.hdr-center{display:flex;gap:6px;align-items:center}
+.hdr-chip{
+  font-family:var(--mono);font-size:9px;letter-spacing:1px;text-transform:uppercase;
+  padding:4px 10px;border-radius:2px;border:1px solid var(--border2);
+  color:var(--text2);background:var(--bg2);
+}
+.hdr-chip.live-chip{color:var(--pos);border-color:var(--pos2);background:rgba(34,201,135,.06)}
+.hdr-chip.live-chip .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--pos);margin-right:4px;animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.btn-hdr{
+  background:var(--surf2);border:1px solid var(--border2);color:var(--text);
+  padding:5px 12px;font-family:var(--mono);font-size:10px;letter-spacing:.5px;
+  cursor:pointer;border-radius:2px;transition:all .15s;
+}
+.btn-hdr:hover{border-color:var(--accent);color:var(--accent)}
+#clock{font-size:10px;color:var(--text2);letter-spacing:1px;min-width:64px;text-align:right}
+
+/* ── SENTIMENT LEGEND ── */
+.sent-legend{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;
+  padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0;
+  background:var(--bg1);
+}
+.sl-card{
+  padding:8px 10px;border-radius:2px;border:1px solid;text-align:center;
+}
+.sl-card.slc-pos{background:rgba(34,201,135,.06);border-color:rgba(34,201,135,.2)}
+.sl-card.slc-neg{background:rgba(240,71,108,.06);border-color:rgba(240,71,108,.2)}
+.sl-card.slc-neu{background:rgba(245,166,35,.06);border-color:rgba(245,166,35,.2)}
+.sl-icon{font-size:16px;margin-bottom:3px}
+.sl-name{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.slc-pos .sl-name{color:var(--pos)} .slc-neg .sl-name{color:var(--neg)} .slc-neu .sl-name{color:var(--warn)}
+.sl-desc{font-size:8px;color:var(--text2);line-height:1.5}
+
+/* ── CATEGORY BREAKDOWN ── */
+.cat-block{
+  margin:0 12px 8px;border:1px solid var(--border);border-radius:3px;overflow:hidden;
+}
+.cat-block-head{
+  padding:7px 12px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cat-block-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2)}
+.cat-item{
+  padding:9px 12px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:5px;
+}
+.cat-item:last-child{border-bottom:none}
+.cat-row1{display:flex;align-items:center;gap:8px}
+.cat-icon{font-size:18px;flex-shrink:0}
+.cat-name{font-family:var(--sans);font-weight:700;font-size:12px;color:var(--bright)}
+.cat-badge{
+  font-size:8px;padding:2px 6px;border-radius:2px;margin-left:auto;
+  background:rgba(157,122,240,.1);color:var(--purple);border:1px solid rgba(157,122,240,.2);
+}
+.cat-triggers{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+.cat-trigger{
+  font-size:8px;padding:1px 5px;border-radius:2px;
+  background:rgba(59,158,255,.08);color:var(--accent);border:1px solid rgba(59,158,255,.15);
+}
+.cat-why{font-size:10px;color:var(--text);line-height:1.5}
+.cat-stocks-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.cat-stock-tag{
+  font-size:9px;padding:2px 7px;border-radius:2px;font-weight:600;
+}
+.cs-up{background:rgba(34,201,135,.1);color:var(--pos);border:1px solid rgba(34,201,135,.2)}
+.cs-dn{background:rgba(240,71,108,.1);color:var(--neg);border:1px solid rgba(240,71,108,.2)}
+.cs-fl{background:rgba(245,166,35,.1);color:var(--warn);border:1px solid rgba(245,166,35,.2)}
+.cat-score-bar{height:3px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden}
+.cat-score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+
+/* ── LAYOUT ── */
+.layout{
+  display:grid;
+  grid-template-columns:420px 1fr 320px;
+  height:calc(100vh - 80px);
+  overflow:hidden;
+}
+
+/* ── PANELS ── */
+.panel{display:flex;flex-direction:column;overflow:hidden;border-right:1px solid var(--border)}
+.panel-head{
+  padding:9px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+  display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg1);
+}
+.panel-title{
+  font-family:var(--mono);font-size:9px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--text2);
+}
+.panel-meta{font-size:9px;color:var(--accent);letter-spacing:.5px}
+.panel-body{flex:1;overflow-y:auto;overflow-x:hidden}
+
+/* ── INPUT PANEL ── */
+.input-area{padding:12px;display:flex;flex-direction:column;gap:8px}
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{
+  flex:1;padding:8px;font-family:var(--mono);font-size:10px;letter-spacing:.5px;
+  cursor:pointer;background:none;border:none;color:var(--text2);
+  border-bottom:2px solid transparent;transition:all .15s;text-align:center;
+}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-body{display:none;flex-direction:column;flex:1;overflow:hidden}
+.tab-body.active{display:flex}
+
+/* Textarea */
+.narr-textarea{
+  width:100%;flex:1;resize:none;min-height:100px;
+  background:var(--bg2);border:1px solid var(--border);color:var(--bright);
+  font-family:var(--mono);font-size:11px;padding:10px;border-radius:2px;
+  transition:border-color .15s;line-height:1.6;
+}
+.narr-textarea:focus{outline:none;border-color:var(--accent)}
+.narr-textarea::placeholder{color:var(--text2);font-style:italic}
+
+/* Sample buttons */
+.samples-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.btn-sample{
+  padding:6px 8px;background:var(--bg2);border:1px solid var(--border);
+  color:var(--text);font-family:var(--mono);font-size:9px;letter-spacing:.5px;
+  cursor:pointer;border-radius:2px;transition:all .15s;text-align:left;line-height:1.3;
+}
+.btn-sample:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sample .scat{display:block;font-size:8px;color:var(--text2);margin-top:1px}
+
+/* RSS */
+.rss-controls{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.row{display:flex;gap:6px}
+select,input[type=text],input[type=password]{
+  background:var(--bg2);border:1px solid var(--border);color:var(--bright);
+  font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:2px;
+  width:100%;transition:border-color .15s;
+}
+select:focus,input:focus{outline:none;border-color:var(--accent)}
+select option{background:var(--surface)}
+input::placeholder{color:var(--text2)}
+.rss-list{flex:1;overflow-y:auto;padding:0 12px 8px}
+.rss-item{
+  padding:8px 10px;border:1px solid var(--border);border-radius:2px;
+  margin-bottom:5px;cursor:pointer;transition:all .15s;
+}
+.rss-item:hover{border-color:var(--border3);background:rgba(59,158,255,.03)}
+.rss-item.sel{border-color:var(--accent);background:rgba(59,158,255,.06)}
+.ri-title{font-size:10px;color:var(--bright);line-height:1.4;margin-bottom:2px}
+.ri-meta{font-size:8px;color:var(--text2)}
+.ri-lang{
+  font-size:8px;padding:1px 5px;border-radius:2px;margin-left:4px;
+  display:inline;
+}
+.ri-lang.tr{background:rgba(245,166,35,.12);color:var(--warn);border:1px solid rgba(245,166,35,.2)}
+.ri-lang.en{background:rgba(34,201,135,.08);color:var(--pos);border:1px solid rgba(34,201,135,.2)}
+
+/* Action row */
+.action-row{
+  padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0;
+  display:flex;flex-direction:column;gap:8px;
+}
+.lang-row{display:flex;align-items:center;gap:6px}
+.lang-badge{font-size:9px;padding:2px 6px;border-radius:2px;font-family:var(--mono)}
+.lang-tr{background:rgba(245,166,35,.12);color:var(--warn);border:1px solid rgba(245,166,35,.2)}
+.lang-en{background:rgba(34,201,135,.08);color:var(--pos);border:1px solid rgba(34,201,135,.2)}
+.lang-hint{font-size:9px;color:var(--text2)}
+.btn-row{display:flex;gap:6px}
+.btn{
+  font-family:var(--mono);font-size:10px;letter-spacing:.5px;text-transform:uppercase;
+  padding:8px 14px;border:none;border-radius:2px;cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;gap:5px;
+}
+.btn-primary{background:var(--accent2);color:#fff;flex:1;justify-content:center}
+.btn-primary:hover:not(:disabled){background:var(--accent);color:#000}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.btn-sec{background:var(--surf2);border:1px solid var(--border2);color:var(--text)}
+.btn-sec:hover{border-color:var(--accent);color:var(--accent)}
+.spin{display:inline-block;width:9px;height:9px;border:1.5px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MIDDLE PANEL: NLP DEEP ANALYSIS ── */
+.analysis-empty{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:10px;color:var(--text2);padding:24px;text-align:center;
+}
+.ae-icon{font-size:32px;opacity:.15;margin-bottom:4px}
+.ae-title{font-size:11px;letter-spacing:1px;color:var(--text2)}
+.ae-sub{font-size:9px;letter-spacing:.5px;line-height:1.7;opacity:.7}
+
+/* Sentiment hero */
+.sent-hero{
+  margin:12px;border-radius:3px;overflow:hidden;
+  border:1px solid var(--border2);background:var(--bg2);
+}
+.sent-hero-bar{height:4px;width:100%}
+.bar-pos{background:linear-gradient(90deg,var(--pos2),var(--pos))}
+.bar-neg{background:linear-gradient(90deg,var(--neg2),var(--neg))}
+.bar-neu{background:linear-gradient(90deg,var(--warn2),var(--warn))}
+.sent-hero-body{padding:14px 16px;display:flex;gap:16px;align-items:center}
+.sent-score-big{
+  width:80px;height:80px;border-radius:50%;flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;
+}
+.ssb-pos{background:radial-gradient(circle,rgba(34,201,135,.15),rgba(34,201,135,.04));border:2px solid var(--pos)}
+.ssb-neg{background:radial-gradient(circle,rgba(240,71,108,.15),rgba(240,71,108,.04));border:2px solid var(--neg)}
+.ssb-neu{background:radial-gradient(circle,rgba(245,166,35,.15),rgba(245,166,35,.04));border:2px solid var(--warn)}
+.ssb-num{font-family:var(--mono);font-weight:700;font-size:24px;line-height:1}
+.ssb-pos .ssb-num{color:var(--pos)}
+.ssb-neg .ssb-num{color:var(--neg)}
+.ssb-neu .ssb-num{color:var(--warn)}
+.ssb-lbl{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px}
+.ssb-pos .ssb-lbl{color:var(--pos)}
+.ssb-neg .ssb-lbl{color:var(--neg)}
+.ssb-neu .ssb-lbl{color:var(--warn)}
+.sent-hero-right{flex:1}
+.sent-label-big{
+  font-family:var(--sans);font-weight:700;font-size:18px;margin-bottom:4px;
+}
+.sl-pos{color:var(--pos)} .sl-neg{color:var(--neg)} .sl-neu{color:var(--warn)}
+.sent-verdict{font-size:10px;color:var(--text);line-height:1.5;margin-bottom:8px}
+.tri-bars{display:flex;flex-direction:column;gap:4px}
+.tri-row{display:flex;align-items:center;gap:6px}
+.tri-lbl{width:44px;font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px}
+.tri-track{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.tri-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.tf-pos{background:linear-gradient(90deg,var(--pos2),var(--pos))}
+.tf-neg{background:linear-gradient(90deg,var(--neg2),var(--neg))}
+.tf-neu{background:linear-gradient(90deg,var(--warn2),var(--warn))}
+.tri-val{font-size:9px;color:var(--bright);min-width:32px;text-align:right}
+
+/* Deep analysis sections */
+.deep-section{margin:0 12px 10px;border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.ds-head{
+  padding:7px 12px;background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.ds-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2)}
+.ds-badge{
+  font-size:8px;padding:2px 6px;border-radius:2px;font-family:var(--mono);
+}
+.ds-body{padding:10px 12px}
+
+/* Key phrases */
+.kp-grid{display:flex;flex-wrap:wrap;gap:5px}
+.kp-tag{
+  font-size:10px;padding:3px 9px;border-radius:2px;border:1px solid;
+  font-family:var(--mono);cursor:default;transition:opacity .15s;
+}
+.kp-pos{background:rgba(34,201,135,.08);color:var(--pos);border-color:rgba(34,201,135,.25)}
+.kp-neg{background:rgba(240,71,108,.08);color:var(--neg);border-color:rgba(240,71,108,.25)}
+.kp-neu{background:rgba(245,166,35,.08);color:var(--warn);border-color:rgba(245,166,35,.25)}
+.kp-info{background:rgba(59,158,255,.08);color:var(--accent);border-color:rgba(59,158,255,.25)}
+.kp-tag:hover{opacity:.7}
+
+/* Impact reasoning cards */
+.ir-card{
+  padding:9px 11px;background:var(--bg2);border:1px solid var(--border);
+  border-radius:2px;margin-bottom:6px;
+}
+.ir-card:last-child{margin-bottom:0}
+.ir-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.ir-sym{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--bright)}
+.ir-sector{font-size:9px;color:var(--purple);background:rgba(157,122,240,.1);border:1px solid rgba(157,122,240,.2);padding:2px 6px;border-radius:2px}
+.ir-dir{
+  font-size:9px;padding:2px 6px;border-radius:2px;margin-left:auto;font-weight:600;
+}
+.ir-up{background:var(--pos2);color:#aff0d4} .ir-down{background:var(--neg2);color:#f0aab8} .ir-flat{background:var(--warn2);color:#ffd891}
+.ir-why{font-size:10px;color:var(--text);line-height:1.5}
+.ir-conf{margin-top:5px;display:flex;align-items:center;gap:6px}
+.ir-conf-lbl{font-size:8px;color:var(--text2);letter-spacing:.5px}
+.ir-conf-bar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.ir-conf-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.ir-conf-val{font-size:8px;color:var(--accent)}
+
+/* Critical factors */
+.cf-list{display:flex;flex-direction:column;gap:5px}
+.cf-item{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;background:var(--bg2);border-radius:2px;border:1px solid var(--border)}
+.cf-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.cf-text{font-size:10px;color:var(--text);line-height:1.5}
+.cf-text strong{color:var(--bright)}
+
+/* Text highlight in excerpt */
+.hl-pos{background:rgba(34,201,135,.18);color:var(--pos);border-radius:2px;padding:0 2px}
+.hl-neg{background:rgba(240,71,108,.18);color:var(--neg);border-radius:2px;padding:0 2px}
+.hl-key{background:rgba(59,158,255,.18);color:var(--accent);border-radius:2px;padding:0 2px}
+
+/* Confidence gauge */
+.conf-gauge-wrap{padding:6px 0 2px}
+.conf-gauge{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:4px}
+.conf-gauge-fill{height:100%;border-radius:4px;transition:width .6s}
+.conf-high{background:linear-gradient(90deg,var(--pos2),var(--pos))}
+.conf-mid{background:linear-gradient(90deg,var(--warn2),var(--warn))}
+.conf-low{background:linear-gradient(90deg,var(--neg2),var(--neg))}
+
+/* Macro risk tags */
+.risk-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.risk-tag{
+  font-size:9px;padding:3px 8px;border-radius:2px;font-family:var(--mono);
+  display:flex;align-items:center;gap:4px;
+}
+.risk-high{background:rgba(240,71,108,.1);color:var(--neg);border:1px solid rgba(240,71,108,.25)}
+.risk-med{background:rgba(245,166,35,.1);color:var(--warn);border:1px solid rgba(245,166,35,.25)}
+.risk-low{background:rgba(34,201,135,.08);color:var(--pos);border:1px solid rgba(34,201,135,.2)}
+
+/* ── RIGHT PANEL: SIM STOCKS ── */
+.sim-notice{
+  margin:10px;padding:8px 10px;background:rgba(157,122,240,.07);
+  border:1px solid rgba(157,122,240,.2);border-radius:2px;font-size:9px;
+  color:var(--text);line-height:1.6;
+  transition:background .3s, border-color .3s;
+}
+.sim-notice strong{font-weight:600}
+.stock-list{padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.stock-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:2px;
+  padding:9px 11px;position:relative;overflow:hidden;transition:border-color .3s;
+}
+.stock-card.affected{border-color:var(--warn) !important;background:rgba(245,166,35,.04)}
+.stock-card.rising{border-left:3px solid var(--pos)}
+.stock-card.falling{border-left:3px solid var(--neg)}
+.sc-row1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px}
+.sc-sym{font-family:var(--mono);font-weight:700;font-size:12px;color:var(--bright)}
+.sc-price{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--bright)}
+.sc-row2{display:flex;justify-content:space-between;align-items:center}
+.sc-name{font-size:9px;color:var(--text2)}
+.sc-chg{font-family:var(--mono);font-size:10px;font-weight:600}
+.sc-chg.pos{color:var(--pos)} .sc-chg.neg{color:var(--neg)}
+.sc-spark{height:22px;margin-top:4px}
+.sc-impact-note{font-size:8px;margin-top:4px;padding:3px 6px;border-radius:2px;display:none}
+.sc-impact-note.show{display:block}
+.sc-up-note{background:rgba(34,201,135,.1);color:var(--pos);border:1px solid rgba(34,201,135,.2)}
+.sc-dn-note{background:rgba(240,71,108,.1);color:var(--neg);border:1px solid rgba(240,71,108,.2)}
+
+/* Sim stats footer */
+.sim-footer{
+  padding:10px;border-top:1px solid var(--border);flex-shrink:0;background:var(--bg1);
+}
+.sim-stat-row{display:flex;gap:6px;flex-wrap:wrap}
+.sim-stat{flex:1;min-width:80px;padding:6px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:2px;text-align:center}
+.sim-stat-num{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--bright)}
+.sim-stat-num.pos{color:var(--pos)} .sim-stat-num.neg{color:var(--neg)}
+.sim-stat-lbl{font-size:8px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;margin-top:1px}
+
+/* History section */
+.hist-list{padding:8px 12px;display:flex;flex-direction:column;gap:5px}
+.hist-item{
+  padding:7px 10px;border:1px solid var(--border);border-radius:2px;
+  border-left:3px solid var(--border2);cursor:pointer;transition:all .15s;
+}
+.hist-item:hover{border-color:var(--border3);border-left-color:var(--accent)}
+.hist-item.pos-h{border-left-color:var(--pos)}
+.hist-item.neg-h{border-left-color:var(--neg)}
+.hist-item.neu-h{border-left-color:var(--warn)}
+.hist-time{font-size:8px;color:var(--text2);margin-bottom:2px}
+.hist-snip{font-size:10px;color:var(--bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:370px}
+.hist-tags{display:flex;gap:4px;margin-top:3px}
+.h-tag{font-size:8px;padding:1px 5px;border-radius:2px}
+.ht-pos{background:rgba(34,201,135,.1);color:var(--pos)}
+.ht-neg{background:rgba(240,71,108,.1);color:var(--neg)}
+.ht-neu{background:rgba(245,166,35,.1);color:var(--warn)}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(7,9,15,.88);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surf2);border:1px solid var(--border3);border-radius:4px;padding:22px;width:380px;max-width:90vw}
+.modal-h{font-family:var(--sans);font-weight:700;font-size:14px;color:var(--bright);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.modal-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:18px;line-height:1}
+.modal-close:hover{color:var(--neg)}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:4px}
+.field-note{font-size:9px;color:var(--text2);margin-top:4px;line-height:1.5}
+.field-note a{color:var(--accent);text-decoration:none}
+.key-status{font-size:9px;margin-left:6px}
+
+/* Toast */
+.toast{position:fixed;bottom:16px;right:16px;background:var(--surf2);border:1px solid var(--border3);padding:8px 14px;border-radius:3px;font-size:10px;z-index:300;transform:translateY(10px);opacity:0;transition:all .25s;pointer-events:none;max-width:260px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.ok{border-color:var(--pos);color:var(--pos)}
+.toast.err{border-color:var(--neg);color:var(--neg)}
+.toast.inf{border-color:var(--accent);color:var(--accent)}
+
+.progress-msg{padding:12px 14px;display:flex;align-items:center;gap:8px;color:var(--accent);font-size:10px;border-bottom:1px solid var(--border)}
+.no-key-bar{padding:7px 14px;background:rgba(245,166,35,.06);border-bottom:1px solid rgba(245,166,35,.15);font-size:9px;color:var(--warn);display:none;align-items:center;gap:6px}
+.no-key-bar button{background:none;border:none;color:var(--accent);cursor:pointer;font-family:var(--mono);font-size:9px;text-decoration:underline}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="logo">
+    NarrativeFlow
+    <span class="logo-tag">NLP × Piyasa</span>
+  </div>
+  <div class="hdr-center">
+    <div class="hdr-chip live-chip"><span class="dot"></span>Simülasyon Aktif</div>
+    <div class="hdr-chip" id="nlpStatus">Groq LLM Hazır</div>
+  </div>
+  <div class="hdr-right">
+    <button class="btn-hdr" onclick="openSettings()">⚙ API Ayarları</button>
+    <div id="clock">--:--:--</div>
+  </div>
+</header>
+
+<div class="no-key-bar" id="noKeyBar">
+  ⚠ Groq API anahtarı yok — demo lexicon modu (console.groq.com'dan ücretsiz alın).
+  <button onclick="openSettings()">Ekle</button>
+</div>
+
+<!-- TICKER TAPE -->
+<div class="ticker-wrap">
+  <div class="ticker-inner" id="tickerInner"></div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+<!-- ══ SOL: GİRİŞ PANELİ ══ -->
+<div class="panel">
+  <div class="panel-head">
+    <span class="panel-title">Anlatı Girişi</span>
+    <span class="panel-meta" id="charCount">0 kr</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tManual" onclick="switchTab('manual')">Manuel Metin</button>
+    <button class="tab" id="tRss" onclick="switchTab('rss')">RSS Haber Akışı</button>
+  </div>
+
+  <!-- MANUAL TAB -->
+  <div class="tab-body active" id="bManual">
+    <div class="input-area">
+      <textarea class="narr-textarea" id="manualText" rows="6"
+        placeholder="Haber başlığı veya analiz edilecek metin girin...&#10;&#10;İngilizce veya Türkçe girebilirsiniz — Türkçe metinler FinBERT analizi öncesinde otomatik İngilizceye çevrilir."
+        oninput="onTextInput()"></textarea>
+      <div class="samples-grid" id="sampleGrid"></div>
+    </div>
+  </div>
+
+  <!-- RSS TAB -->
+  <div class="tab-body" id="bRss">
+    <div class="rss-controls">
+      <div class="row">
+        <select id="rssSel" onchange="onRssSelChange()" style="flex:1">
+          <option value="bloombergbt">Bloomberg HT (TR)</option>
+          <option value="reuters_biz">Reuters Business</option>
+          <option value="reuters_top">Reuters Top News</option>
+          <option value="haberturk">Habertürk Ekonomi</option>
+          <option value="dunya">Dünya Gazetesi</option>
+          <option value="doviz">Doviz.com Haberler</option>
+          <option value="custom">Özel URL...</option>
+        </select>
+        <button class="btn btn-sec" id="btnFetch" onclick="fetchRSS()" style="flex-shrink:0;white-space:nowrap">Getir</button>
+      </div>
+      <div id="customUrlRow" style="display:none">
+        <input type="text" id="customUrl" placeholder="https://...">
+      </div>
+    </div>
+    <div class="rss-list" id="rssList">
+      <div style="color:var(--text2);font-size:9px;text-align:center;padding:20px 0">Haber akışı getirmek için Getir'e tıklayın</div>
+    </div>
+  </div>
+
+  <!-- ACTION ROW -->
+  <div class="action-row">
+    <div class="lang-row">
+      <span class="lang-badge" id="langBadge" style="display:none">TR</span>
+      <span class="lang-hint" id="langHint">Dil tespiti için metin girin</span>
+      <button class="btn btn-sec" id="btnTranslate" style="font-size:9px;padding:4px 8px;display:none" onclick="doTranslate()">TR→EN Çevir</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-sec" onclick="clearAll()">Temizle</button>
+      <button class="btn btn-primary" id="btnAnalyze" disabled onclick="analyze()">
+        <span id="btnIcon">▶</span> Analiz Et
+      </button>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="histSection" style="border-top:1px solid var(--border);display:none">
+    <div class="panel-head" style="cursor:pointer" onclick="toggleHist()">
+      <span class="panel-title">Analiz Geçmişi</span>
+      <span class="panel-meta" id="histCount">0</span>
+    </div>
+    <div id="histBody" class="hist-list" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ══ ORTA: DERİN NLP ANALİZİ ══ -->
+<div class="panel">
+  <div class="panel-head">
+    <span class="panel-title">Derin NLP Analizi</span>
+    <span class="panel-meta" id="sentStatus">—</span>
+  </div>
+  <!-- Sentiment legend — always visible -->
+  <div class="sent-legend" id="sentLegend">
+    <div class="sl-card slc-pos">
+      <div class="sl-icon">📈</div>
+      <div class="sl-name">Pozitif</div>
+      <div class="sl-desc">Yatırımcı güvenini artıran, alım baskısı yaratan haberler. Büyüme, kâr artışı, olumlu makro veri sinyalleri.</div>
+    </div>
+    <div class="sl-card slc-neg">
+      <div class="sl-icon">📉</div>
+      <div class="sl-name">Negatif</div>
+      <div class="sl-desc">Risk iştahını düşüren, satış baskısı yaratan haberler. Kriz, faiz artışı, jeopolitik gerilim, yaptırım sinyalleri.</div>
+    </div>
+    <div class="sl-card slc-neu">
+      <div class="sl-icon">⚖</div>
+      <div class="sl-name">Nötr</div>
+      <div class="sl-desc">Piyasa yönü belirsiz haberler. Beklenti dahilindeki açıklamalar, rutin veriler, yoruma açık politika mesajları.</div>
+    </div>
+  </div>
+  <div class="panel-body" id="nlpPanel">
+    <div class="analysis-empty" id="nlpEmpty">
+      <div class="ae-icon">◎</div>
+      <div class="ae-title">Henüz analiz yapılmadı</div>
+      <div class="ae-sub">Bir haber başlığı veya metin girerek<br>Analiz Et butonuna tıklayın.<br><br>FinBERT modeli metni Financial Positive /<br>Negative / Neutral olarak sınıflandırır<br>ve sektörel etkileri çıkarır.</div>
+    </div>
+    <div id="nlpResult" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ══ SAĞ: SİMÜLASYON PANELİ ══ -->
+<div class="panel" style="border-right:none">
+  <div class="panel-head">
+    <span class="panel-title">BIST Simülasyonu</span>
+    <span class="panel-meta" id="simStatus">Çalışıyor</span>
+  </div>
+  <div class="panel-body">
+    <div class="sim-notice" id="simNotice">
+      ⬡ Simülasyon aktif — fiyatlar rassal hareket ediyor. Analiz yap → ilgili hisseler NLP kararına göre yön alır.
+    </div>
+    <div class="stock-list" id="stockList"></div>
+  </div>
+  <div class="sim-footer">
+    <div class="sim-stat-row">
+      <div class="sim-stat">
+        <div class="sim-stat-num" id="statAffected">0</div>
+        <div class="sim-stat-lbl">Etkilenen</div>
+      </div>
+      <div class="sim-stat">
+        <div class="sim-stat-num pos" id="statRising">0</div>
+        <div class="sim-stat-lbl">Yükselen</div>
+      </div>
+      <div class="sim-stat">
+        <div class="sim-stat-num neg" id="statFalling">0</div>
+        <div class="sim-stat-lbl">Düşen</div>
+      </div>
+      <div class="sim-stat">
+        <div class="sim-stat-num" id="statAnalyses">0</div>
+        <div class="sim-stat-lbl">Analiz</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /layout -->
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <div class="modal-h">
+      API Ayarları
+      <button class="modal-close" onclick="closeSettings()">×</button>
+    </div>
+    <div class="field">
+      <label>Groq API Key
+        <span class="key-status" id="keyStatus"></span>
+      </label>
+      <input type="password" id="hfKeyInput" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxxxxx">
+      <div class="field-note">
+        <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> — ücretsiz, kayıt gerekir (Google ile giriş yeterli)<br>
+        Model: <strong style="color:var(--bright)">llama-3.1-8b-instant</strong> — Türkçe/İngilizce sentiment + çeviri
+      </div>
+    </div>
+    <div class="field">
+      <label>Simülasyon Hızı</label>
+      <select id="simSpeed">
+        <option value="3000">Hızlı (3s)</option>
+        <option value="6000" selected>Normal (6s)</option>
+        <option value="12000">Yavaş (12s)</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-sec" onclick="closeSettings()">İptal</button>
+      <button class="btn btn-primary" onclick="saveSettings()" style="flex:1;justify-content:center">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+/* ================================================================
+   DATA
+   ================================================================ */
+// Groq API key — console.groq.com adresinden ücretsiz alınır
+const DEFAULT_GROQ_KEY = '';   // <-- buraya kendi keyini yaz
+
+const STOCKS = [
+  {sym:'THYAO',name:'Türk Hava Yolları',sectors:['aviation','tourism','fuel'],         base:337.0, vol:.0022},
+  {sym:'GARAN',name:'Garanti BBVA',      sectors:['banking','finance','rates'],         base:148.5, vol:.0018},
+  {sym:'AKBNK',name:'Akbank',            sectors:['banking','finance','rates'],         base:104.8, vol:.0018},
+  {sym:'ISCTR',name:'İş Bankası (C)',    sectors:['banking','finance','rates'],         base:22.4,  vol:.002 },
+  {sym:'TUPRS',name:'Tüpraş',            sectors:['energy','oil','commodity'],          base:238.0, vol:.0028},
+  {sym:'ASELS',name:'Aselsan',           sectors:['defense','tech','nato'],             base:103.5, vol:.0025},
+  {sym:'EREGL',name:'Ereğli Demir Çelik',sectors:['steel','metal','commodity'],        base:49.8,  vol:.0025},
+  {sym:'BIMAS',name:'BİM Mağazaları',    sectors:['retail','consumer','inflation'],     base:710.0, vol:.0013},
+  {sym:'KCHOL',name:'Koç Holding',       sectors:['holding','conglomerate','economy'], base:218.0, vol:.0016},
+  {sym:'MGROS',name:'Migros Ticaret',    sectors:['retail','consumer','inflation'],     base:315.0, vol:.0018},
+];
+
+// Sector → keyword mapping (TR + EN) — genişletilmiş versiyon
+const SECTOR_KW = {
+  banking:    {
+    tr:['faiz','merkez bankası','tcmb','enflasyon','kredi','döviz','kur','para politikası',
+        'borçlanma','likidite','finansal','mevduat','munzam','zorunlu karşılık','swap',
+        'bankacılık','banka','kkm','düzenleme','sermaye yeterliliği','takipteki','npl'],
+    en:['interest rate','central bank','inflation','credit','monetary policy','fed','rate hike',
+        'rate cut','liquidity','bank','financial','deposit','reserve requirement','capital adequacy',
+        'federal reserve','tightening','easing','basis points','bps','yield curve','rate decision']
+  },
+  aviation:   {
+    tr:['uçuş','turizm','havacılık','yolcu','havalimanı','uçak','seyahat','tatil',
+        'rezervasyon','doluluk','kapasite','thy','türk hava','koltuk'],
+    en:['flight','tourism','aviation','passenger','airport','airline','travel','booking',
+        'jet fuel','load factor','capacity','seat','route','carrier']
+  },
+  energy:     {
+    tr:['petrol','enerji','akaryakıt','doğalgaz','ham petrol','brent','opec','yakıt',
+        'elektrik','enerji fiyatları','varili','rafinerisi','tüpraş','lpg','doğal gaz'],
+    en:['oil','energy','crude','natural gas','brent','opec','fuel','electricity',
+        'petroleum','barrel','refinery','wti','lng','pipeline','energy price']
+  },
+  defense:    {
+    tr:['savunma','askeri','ihracat','silah','nato','savaş','güvenlik','füze','drone',
+        'uav','çatışma','aselsan','roketsan','bayraktar','savunma sanayi','muharip'],
+    en:['defense','military','nato','war','security','weapon','missile','drone',
+        'conflict','armed','geopolitical','combat','procurement','defense spending']
+  },
+  steel:      {
+    tr:['çelik','demir','metal','hammadde','cevher','alüminyum','ereğli','demir çelik',
+        'hadde','mamul','inşaat çeliği'],
+    en:['steel','iron','metal','commodity','ore','coal','aluminum','rebar',
+        'hot rolled','manufacturing','flat steel','long steel']
+  },
+  retail:     {
+    tr:['market','perakende','gıda','tüketici','alışveriş','harcama','satış',
+        'bim','migros','a101','şok','market zinciri','iç tüketim','hanehalkı'],
+    en:['retail','consumer','food','grocery','shopping','spending','sales',
+        'consumption','same-store','supermarket','discount','fast moving']
+  },
+  holding:    {
+    tr:['holding','yatırım','ekonomi','piyasa','büyüme','gsyh','borsa',
+        'koç','sabancı','portföy','iştirak','konglomera'],
+    en:['holding','investment','economy','market','growth','gdp','stock',
+        'equity','conglomerate','portfolio','subsidiary']
+  },
+  geopolitics:{
+    tr:['jeopolitik','kriz','gerilim','savaş','ambargo','yaptırım','çatışma',
+        'risk','ittifak','diplomatik','sınır','uluslararası','anlaşmazlık'],
+    en:['geopolitical','crisis','tension','war','embargo','sanction','conflict',
+        'risk','instability','alliance','diplomatic','border','international']
+  },
+  rates:      {
+    tr:['faiz','faiz indirimi','faiz artırımı','faiz kararı','faiz oranı',
+        'enflasyon','merkez bankası','para politikası','kur','dolar','politika faizi'],
+    en:['interest rate','rate cut','rate hike','rate decision','fed rate',
+        'inflation','central bank','monetary','dollar','policy rate','fomc']
+  },
+  fuel:       {
+    tr:['akaryakıt','petrol','yakıt','jet yakıtı','brent','ham petrol','mazot','benzin'],
+    en:['fuel','oil','crude','jet fuel','brent','kerosene','gasoline','diesel']
+  },
+  commodity:  {
+    tr:['hammadde','emtia','petrol','çelik','altın','buğday','bakır','demir cevheri'],
+    en:['commodity','raw material','oil','steel','gold','wheat','copper','iron ore','coking coal']
+  },
+  nato:       {
+    tr:['nato','savunma','askeri','ittifak','batı','üyelik','savunma harcaması'],
+    en:['nato','defense','military','alliance','western','membership','defense spending','article 5']
+  },
+  inflation:  {
+    tr:['enflasyon','fiyat','tüfe','üfe','satın alma','maaş','zam','hayat pahalılığı','reel'],
+    en:['inflation','price','cpi','ppi','purchasing power','wage','cost of living','real wage']
+  },
+  economy:    {
+    tr:['ekonomi','büyüme','gdp','gsyh','resesyon','toparlanma','daralma','büyüme hızı','ihracat','ithalat'],
+    en:['economy','growth','gdp','recession','recovery','fiscal','contraction','export','import','trade']
+  },
+  tourism:    {
+    tr:['turizm','otel','tatil','rezervasyon','ziyaretçi','turist','sezon','doluluk'],
+    en:['tourism','hotel','holiday','booking','visitor','resort','tourist season','occupancy']
+  },
+  tech:       {
+    tr:['teknoloji','dijital','yazılım','yapay zeka','siber','inovasyon','ar-ge'],
+    en:['technology','digital','software','ai','artificial intelligence','cyber','innovation','r&d']
+  },
+  finance:    {
+    tr:['finans','sermaye','borç','tahvil','hisse','yatırımcı','fon','kredi notu'],
+    en:['finance','capital','debt','bond','equity','investor','fund','credit rating','spread']
+  },
+  currency:   {
+    tr:['dolar','euro','kur','tl','türk lirası','döviz','kur riski','devalüasyon','değer kaybı'],
+    en:['dollar','euro','currency','exchange rate','lira','fx','devaluation','depreciation','usd','eur']
+  },
+};
+
+// Kategori açıklamaları (UI için)
+const SECTOR_META = {
+  banking:    {icon:'🏦', label:'Bankacılık & Faiz',      desc:'Faiz kararları, merkez bankası politikaları, kredi büyümesi ve likidite koşullarını etkiler.'},
+  rates:      {icon:'📊', label:'Para Politikası',         desc:'Fed, TCMB ve diğer merkez bankalarının faiz kararları tüm piyasayı etkiler.'},
+  aviation:   {icon:'✈',  label:'Havacılık & Turizm',     desc:'Yolcu trafiği, doluluk oranları ve yakıt maliyetleri THY yi doğrudan etkiler.'},
+  energy:     {icon:'⚡', label:'Enerji & Petrol',         desc:'Ham petrol fiyatları rafinericilik karlılığını ve havacılık maliyetlerini belirler.'},
+  defense:    {icon:'🛡', label:'Savunma Sanayi',          desc:'NATO kararları, savunma bütçeleri ve ihracat anlaşmaları savunma hisselerini güçlendirir.'},
+  steel:      {icon:'🏗', label:'Demir-Çelik & Metal',    desc:'Küresel çelik talebi ve hammadde fiyatları Ereğli nin ihracat rekabetçiliğini etkiler.'},
+  retail:     {icon:'🛒', label:'Perakende & Tüketici',   desc:'Hanehalkı harcaması, enflasyon ve iç tüketim dinamikleri perakendeyi şekillendirir.'},
+  holding:    {icon:'🏢', label:'Holding & Ekonomi',       desc:'Genel ekonomik büyüme ve yatırım ortamı diversifiye holding hisselerini etkiler.'},
+  geopolitics:{icon:'🌍', label:'Jeopolitik Risk',         desc:'Bölgesel çatışmalar, yaptırımlar ve diplomatik gerilimler tüm piyasada risk primini artırır.'},
+  inflation:  {icon:'💰', label:'Enflasyon',               desc:'Yüksek enflasyon reel tüketimi baskılar, merkez bankası politikasını ve faiz beklentisini değiştirir.'},
+  currency:   {icon:'💱', label:'Kur & Döviz',             desc:'TL kur hareketleri ihracatçı ve ithalatçı şirketleri farklı etkiler; yabancı sermaye akışını yönlendirir.'},
+  economy:    {icon:'📈', label:'Makroekonomik Göstergeler',desc:'GSYİH, büyüme verisi ve resesyon sinyalleri geniş piyasa beklentisini ve değerlemeyi etkiler.'},
+  fuel:       {icon:'⛽', label:'Yakıt Fiyatları',          desc:'Jet yakıtı ve akaryakıt fiyatları THYAO nun operasyonel maliyetlerini doğrudan etkiler.'},
+  commodity:  {icon:'⛏', label:'Emtia',                   desc:'Ham madde fiyatları üretici maliyetlerini, marjları ve ihracat rekabetini etkiler.'},
+  nato:       {icon:'⭐', label:'NATO & Savunma İttifakı', desc:'NATO harcama taahhütleri Türk savunma sanayii şirketleri için ihracat fırsatı yaratır.'},
+  finance:    {icon:'💹', label:'Finansal Piyasalar',      desc:'Sermaye akışları, tahvil spreadleri ve kredi notu değişiklikleri finansal sektörü etkiler.'},
+  tech:       {icon:'💻', label:'Teknoloji',               desc:'Dijital dönüşüm ve yapay zeka yatırımları teknoloji ağırlıklı şirketleri etkiler.'},
+  tourism:    {icon:'🏖', label:'Turizm',                  desc:'Turistik sezon, rezervasyon verileri ve yabancı ziyaretçi sayısı havacılık ve oteli etkiler.'},
+};
+
+const SAMPLES = [
+  {text:"Federal Reserve raised interest rates by 50 basis points, exceeding market expectations. The dollar strengthened across emerging markets, increasing pressure on Turkish lira and banking sector liquidity.",cat:"💰 Fed / Bankacılık",lang:'en'},
+  {text:"OPEC+ announced unexpected production cuts of 1.5 million barrels per day. Brent crude surged past $105, creating significant cost headwinds for airlines while boosting energy refinery stocks.",cat:"⚡ Petrol / OPEC",lang:'en'},
+  {text:"NATO zirvesinde savunma harcamalarını artırma kararı alındı. Üye ülkeler GSYİH'nın %3'ünü savunmaya ayıracak. Türkiye'nin savunma sanayii şirketleri için güçlü ihracat fırsatları doğabilir.",cat:"🛡 NATO / Savunma",lang:'tr'},
+  {text:"Turkey tourism revenues hit record highs as new direct routes from Asia boosted arrivals 28%. Airlines and hospitality sector report summer bookings exceeding pre-pandemic levels by 40%.",cat:"✈ Turizm / THY",lang:'en'},
+  {text:"Türkiye enflasyonu beklentilerin üzerinde %65'e ulaştı. Merkez Bankası acil toplantı kararı aldı. Bankacılık sektörü ve perakende hisselerinde sert satışlar bekleniyor.",cat:"📊 Enflasyon / TL",lang:'tr'},
+  {text:"Global steel demand fell sharply as China's property sector downturn deepened. Iron ore prices dropped 18%, pressuring Turkish steel producers on export competitiveness.",cat:"🏗 Çelik / Emtia",lang:'en'},
+];
+
+const RSS_FEEDS = {
+  bloombergbt: 'https://www.bloomberght.com/rss',
+  reuters_biz: 'https://feeds.reuters.com/reuters/businessNews',
+  reuters_top: 'https://feeds.reuters.com/reuters/topNews',
+  haberturk:   'https://www.haberturk.com/rss/ekonomi.xml',
+  dunya:       'https://www.dunya.com/rss.xml',
+  doviz:       'https://www.doviz.com/rss/haberler',
+};
+
+/* ================================================================
+   STATE
+   ================================================================ */
+let cfg = {groqKey: DEFAULT_GROQ_KEY, simSpeedMs: 6000};
+let prices = {}, prevPrices = {}, sparkData = {}, sparkCharts = {};
+let simTimer = null, analysisCount = 0;
+let currentText = '', currentLang = 'en', activeTab = 'manual';
+let history = [];
+let activeAffected = [];
+
+/* ================================================================
+   INIT
+   ================================================================ */
+window.onload = () => {
+  STOCKS.forEach(s => {
+    prices[s.sym] = s.base;
+    prevPrices[s.sym] = s.base;
+    sparkData[s.sym] = Array.from({length:24}, (_,i) => s.base*(1+(Math.random()-.5)*.015));
+  });
+  buildSamples();
+  buildStockCards();
+  updateStockCards();
+  buildTicker();
+  startSim();
+  startClock();
+  checkKeyWarn();
+};
+
+/* ================================================================
+   CLOCK
+   ================================================================ */
+function startClock(){
+  const t=()=>document.getElementById('clock').textContent=new Date().toLocaleTimeString('tr-TR');
+  t(); setInterval(t,1000);
+}
+
+/* ================================================================
+   TICKER TAPE
+   ================================================================ */
+function buildTicker(){
+  const inner = document.getElementById('tickerInner');
+  if(!inner) return;
+  // Build 2 sets for seamless loop
+  let html = '';
+  for(let pass=0; pass<2; pass++){
+    STOCKS.forEach(s=>{
+      const px = prices[s.sym], prev = prevPrices[s.sym];
+      const pct = ((px - s.base) / s.base * 100);
+      const sign = pct>=0?'+':'';
+      const cls = pct>=0?'pos':'neg';
+      html += `<div class="t-item">
+        <span class="t-sym">${s.sym}</span>
+        <span class="t-px" id="${pass===0?'tk-'+s.sym:''}">${px.toFixed(2)}</span>
+        <span class="t-chg ${cls}" id="${pass===0?'tc-'+s.sym:''}">${sign}${pct.toFixed(2)}%</span>
+      </div>`;
+    });
+  }
+  inner.innerHTML = html;
+}
+
+function updateTicker(){
+  STOCKS.forEach(s=>{
+    const px  = prices[s.sym];
+    const pct = ((px - s.base) / s.base * 100);
+    const sign = pct>=0?'+':'';
+    const pxEl = document.getElementById('tk-'+s.sym);
+    const chEl = document.getElementById('tc-'+s.sym);
+    if(pxEl) pxEl.textContent = px.toFixed(2);
+    if(chEl){ chEl.textContent=sign+pct.toFixed(2)+'%'; chEl.className='t-chg '+(pct>=0?'pos':'neg'); }
+  });
+}
+
+/* ================================================================
+   SIMULATION TICK
+   ================================================================ */
+function startSim(){
+  clearInterval(simTimer);
+  simTimer = setInterval(simTick, cfg.simSpeedMs);
+}
+
+function simTick(){
+  STOCKS.forEach(s=>{
+    prevPrices[s.sym] = prices[s.sym];
+    // base noise
+    let drift = (Math.random()-.49)*2*s.vol;
+    // if affected by last analysis, add directional drift
+    const aff = activeAffected.find(a=>a.sym===s.sym);
+    if(aff) drift += aff.direction * s.vol * 1.4;
+    prices[s.sym] = Math.max(prices[s.sym]*(1+drift), s.base*.4);
+    sparkData[s.sym].push(prices[s.sym]);
+    if(sparkData[s.sym].length>30) sparkData[s.sym].shift();
+  });
+  updateStockCards();
+  updateTicker();
+  updateSimStats();
+}
+
+/* ================================================================
+   STOCK CARDS BUILD
+   ================================================================ */
+function buildStockCards(){
+  const el = document.getElementById('stockList');
+  el.innerHTML = '';
+  STOCKS.forEach(s=>{
+    el.innerHTML += `
+    <div class="stock-card" id="sc-${s.sym}">
+      <div class="sc-row1">
+        <div>
+          <div class="sc-sym">${s.sym}</div>
+          <div class="sc-name">${s.name}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="sc-price" id="sp-${s.sym}">—</div>
+          <div class="sc-chg" id="sc-${s.sym}">—</div>
+        </div>
+      </div>
+      <div class="sc-spark"><canvas id="spark-${s.sym}" height="22"></canvas></div>
+      <div class="sc-impact-note" id="sn-${s.sym}"></div>
+    </div>`;
+  });
+  setTimeout(()=>{
+    STOCKS.forEach(s=>{
+      const cv = document.getElementById('spark-'+s.sym);
+      if(!cv) return;
+      sparkCharts[s.sym] = new Chart(cv,{
+        type:'line',
+        data:{labels:sparkData[s.sym].map((_,i)=>i),datasets:[{data:sparkData[s.sym],borderColor:'#3b9eff',borderWidth:1.2,pointRadius:0,fill:false,tension:.3}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:0}}
+      });
+    });
+  },50);
+}
+
+function updateStockCards(){
+  STOCKS.forEach(s=>{
+    const px   = prices[s.sym];
+    const base = s.base;            // gün başı baz fiyat — % değişimi buna göre
+    const prev = prevPrices[s.sym]; // bir önceki tick — renk/ok yönü için
+    const pctFromBase = ((px - base) / base * 100);   // ekranda gösterilen %
+    const pctFromPrev = ((px - prev) / prev * 100);   // renk yönü
+    const pxEl = document.getElementById('sp-'+s.sym);
+    const chEl = document.getElementById('sc-'+s.sym);
+    if(!pxEl) return;
+    pxEl.textContent = px.toFixed(2)+' ₺';
+    const sign = pctFromBase >= 0 ? '+' : '';
+    chEl.textContent = sign + pctFromBase.toFixed(2) + '%';
+    chEl.className = 'sc-chg ' + (pctFromBase >= 0 ? 'pos' : 'neg');
+    // sparkline rengi son tick yönüne göre
+    if(sparkCharts[s.sym]){
+      sparkCharts[s.sym].data.datasets[0].data   = sparkData[s.sym];
+      sparkCharts[s.sym].data.datasets[0].borderColor = pctFromPrev >= 0 ? '#22c987' : '#f0476c';
+      sparkCharts[s.sym].data.labels = sparkData[s.sym].map((_,i) => i);
+      sparkCharts[s.sym].update('none');
+    }
+  });
+}
+
+function updateSimStats(){
+  const affected = activeAffected.length;
+  const rising = activeAffected.filter(a=>a.direction>0).length;
+  const falling = activeAffected.filter(a=>a.direction<0).length;
+  document.getElementById('statAffected').textContent = affected;
+  document.getElementById('statRising').textContent = rising;
+  document.getElementById('statFalling').textContent = falling;
+  document.getElementById('statAnalyses').textContent = analysisCount;
+}
+
+/* ================================================================
+   SAMPLE BUTTONS
+   ================================================================ */
+function buildSamples(){
+  const g = document.getElementById('sampleGrid');
+  g.innerHTML = SAMPLES.map((s,i)=>
+    `<button class="btn-sample" onclick="loadSample(${i})">
+      ${s.cat}
+      <span class="scat">${s.lang==='tr'?'Türkçe':'English'}</span>
+    </button>`
+  ).join('');
+}
+function loadSample(i){
+  const s=SAMPLES[i];
+  document.getElementById('manualText').value=s.text;
+  onTextInput();
+  switchTab('manual');
+}
+
+/* ================================================================
+   TEXT INPUT
+   ================================================================ */
+function onTextInput(){
+  const txt=document.getElementById('manualText').value.trim();
+  currentText=txt;
+  activeTab='manual';
+  document.getElementById('charCount').textContent=txt.length+' kr';
+  document.getElementById('btnAnalyze').disabled=txt.length<10;
+  detectAndShowLang(txt);
+}
+
+function detectAndShowLang(txt){
+  if(!txt){document.getElementById('langBadge').style.display='none';return}
+  const trKw=[' ve ',' ile ',' için ',' olan ',' bu ',' bir ',' de ',' da ',' ki ',' kadar ',' göre ',' olarak ',' ancak ',' ise '];
+  const hits=trKw.filter(k=>(' '+txt.toLowerCase()+' ').includes(k)).length;
+  currentLang=hits>=2?'tr':'en';
+  const badge=document.getElementById('langBadge');
+  badge.style.display='inline';
+  badge.className='lang-badge '+(currentLang==='tr'?'lang-tr':'lang-en');
+  badge.textContent=currentLang.toUpperCase();
+  document.getElementById('langHint').textContent=currentLang==='tr'
+    ?'FinBERT analizi öncesinde otomatik İngilizceye çevrilecek'
+    :'FinBERT için uygun dil ✓';
+  document.getElementById('btnTranslate').style.display=currentLang==='tr'?'inline-flex':'none';
+}
+
+function detectLang(txt){
+  const trKw=[' ve ',' ile ',' için ',' bir ',' bu ',' da ',' de ',' ki ',' olan '];
+  return trKw.filter(k=>(' '+txt.toLowerCase()+' ').includes(k)).length>=2?'tr':'en';
+}
+
+function clearAll(){
+  document.getElementById('manualText').value='';
+  currentText=''; onTextInput();
+  document.getElementById('nlpEmpty').style.display='flex';
+  document.getElementById('nlpResult').style.display='none';
+  document.getElementById('sentStatus').textContent='—';
+  activeAffected=[];
+  STOCKS.forEach(s=>{
+    const c=document.getElementById('sc-'+s.sym);
+    if(c){c.className='stock-card';c.style.borderLeftWidth='';}
+    const n=document.getElementById('sn-'+s.sym);
+    if(n){n.className='sc-impact-note';n.style.display='none';}
+  });
+  updateSimStats();
+}
+
+/* ================================================================
+   TAB SWITCH
+   ================================================================ */
+function switchTab(t){
+  activeTab=t;
+  document.getElementById('tManual').className='tab'+(t==='manual'?' active':'');
+  document.getElementById('tRss').className='tab'+(t==='rss'?' active':'');
+  document.getElementById('bManual').className='tab-body'+(t==='manual'?' active':'');
+  document.getElementById('bRss').className='tab-body'+(t==='rss'?' active':'');
+}
+
+/* ================================================================
+   RSS FETCH — multi-proxy
+   ================================================================ */
+const RSS_PROXIES=[
+  u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+];
+
+function onRssSelChange(){
+  document.getElementById('customUrlRow').style.display=
+    document.getElementById('rssSel').value==='custom'?'block':'none';
+}
+
+async function fetchRSS(){
+  const sel=document.getElementById('rssSel').value;
+  const url=sel==='custom'?document.getElementById('customUrl').value.trim():RSS_FEEDS[sel];
+  if(!url){toast('URL giriniz','err');return}
+  const btn=document.getElementById('btnFetch');
+  btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  document.getElementById('rssList').innerHTML=
+    '<div style="color:var(--text2);font-size:9px;text-align:center;padding:16px">Bağlanıyor...</div>';
+  let xml=null, lastErr=null;
+  for(const pFn of RSS_PROXIES){
+    try{
+      const r=await fetch(pFn(url),{signal:AbortSignal.timeout(10000)});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      xml=await r.text(); break;
+    }catch(e){lastErr=e}
+  }
+  btn.innerHTML='Getir';btn.disabled=false;
+  if(!xml){
+    document.getElementById('rssList').innerHTML=
+      `<div style="color:var(--neg);font-size:9px;padding:8px;line-height:1.6">Hata: ${lastErr?.message||'Bilinmiyor'}<br>Tüm proxy'ler başarısız oldu.</div>`;
+    return;
+  }
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  let items=[...doc.querySelectorAll('item'),...doc.querySelectorAll('entry')].slice(0,16);
+  if(!items.length){document.getElementById('rssList').innerHTML='<div style="color:var(--text2);font-size:9px;padding:8px">Haber bulunamadı</div>';return}
+  const list=document.getElementById('rssList');
+  list.innerHTML='';
+  items.forEach(item=>{
+    const raw=item.querySelector('title')?.textContent||'';
+    const title=raw.replace(/<!\[CDATA\[|\]\]>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim();
+    if(!title) return;
+    const pub=item.querySelector('pubDate,published,updated')?.textContent?.slice(0,19)||'';
+    const lang=detectLang(title);
+    const d=document.createElement('div');
+    d.className='rss-item';
+    d.innerHTML=`<div class="ri-title">${title}<span class="ri-lang ${lang}">${lang.toUpperCase()}</span></div><div class="ri-meta">${pub}</div>`;
+    d.onclick=()=>{
+      document.querySelectorAll('.rss-item').forEach(x=>x.classList.remove('sel'));
+      d.classList.add('sel');
+      currentText=title; currentLang=lang; activeTab='rss';
+      document.getElementById('btnAnalyze').disabled=title.length<5;
+      document.getElementById('charCount').textContent=title.length+' kr';
+      detectAndShowLang(title);
+      toast('"'+title.slice(0,35)+'…" seçildi','inf');
+    };
+    list.appendChild(d);
+  });
+  toast(items.length+' haber yüklendi ✓','ok');
+}
+
+/* ================================================================
+   TRANSLATE (manual button)
+   ================================================================ */
+async function doTranslate(){
+  const txt=document.getElementById('manualText').value.trim();
+  if(!txt){toast('Metin girin','err');return}
+  if(!cfg.groqKey){toast('Groq API anahtarı gerekli — Ayarlar','err');return}
+  const btn=document.getElementById('btnTranslate');
+  btn.innerHTML='<span class="spin"></span>';btn.disabled=true;
+  try{
+    const result = await groqPost([
+      {role:'system', content:'You are a precise translator. Translate the given Turkish financial/news text to English. Return JSON: {"translation": "..."}'},
+      {role:'user',   content:'Translate to English: '+txt}
+    ]);
+    const parsed = JSON.parse(result||'{}');
+    if(parsed.translation){
+      document.getElementById('manualText').value=parsed.translation;
+      currentLang='en'; onTextInput(); toast('Çeviri tamamlandı ✓','ok');
+    } else throw new Error('Çeviri yanıtı boş');
+  }catch(e){toast('Çeviri hatası: '+e.message.slice(0,60),'err')}
+  btn.innerHTML='TR→EN Çevir';btn.disabled=false;
+}
+
+/* ================================================================
+   SECTOR DETECTION — returns [{sector, hits, score}]
+   ================================================================ */
+function detectSectors(text){
+  const t=text.toLowerCase();
+  const found=[];
+  for(const [sec,kws] of Object.entries(SECTOR_KW)){
+    const all=[...kws.tr,...kws.en];
+    const hits=all.filter(k=>t.includes(k));
+    if(hits.length) found.push({sector:sec,hits,score:hits.length});
+  }
+  found.sort((a,b)=>b.score-a.score);
+  return found;
+}
+
+/* ================================================================
+   GROQ API — api.groq.com (Türkiye'de erişilebilir)
+   Model: llama-3.1-8b-instant (hızlı, ücretsiz)
+   ================================================================ */
+async function groqPost(messages){
+  if(!cfg.groqKey) return null;
+  let res;
+  try{
+    res = await fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+cfg.groqKey,
+        'Content-Type':'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages,
+        temperature: 0.1,
+        max_tokens: 512,
+        response_format: {type:'json_object'},
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+  }catch(e){ throw new Error('Bağlantı hatası: '+e.message+' — İnternet bağlantınızı kontrol edin.'); }
+  if(res.status===401) throw new Error('Groq API anahtarı geçersiz (401). console.groq.com/keys adresini kontrol edin.');
+  if(res.status===429) throw new Error('Rate limit (429) — birkaç saniye bekleyip tekrar deneyin.');
+  if(!res.ok){ const t=await res.text(); throw new Error('HTTP '+res.status+': '+t.slice(0,100)); }
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || null;
+}
+
+/* ================================================================
+   DEMO SENTIMENT (no API key)
+   ================================================================ */
+function demoSentiment(text){
+  const t=text.toLowerCase();
+  const pw=['increase','growth','surge','rally','record','strong','positive','boost','rise','beat','recovery','expand','profit','gain','up','higher','optimistic','improve','bullish'];
+  const nw=['decrease','fall','drop','crash','crisis','risk','pressure','tension','negative','miss','cut','decline','loss','down','lower','pessimistic','worsen','bearish','sanction','war','conflict'];
+  let p=pw.filter(w=>t.includes(w)).length;
+  let n=nw.filter(w=>t.includes(w)).length;
+  const tot=Math.max(p+n,1);
+  const ps=p/tot*.75+Math.random()*.12;
+  const ns=n/tot*.75+Math.random()*.12;
+  const neutral=Math.max(0,1-ps-ns);
+  return {positive:Math.min(ps,.95),negative:Math.min(ns,.95),neutral};
+}
+
+/* ================================================================
+   SHOW PROGRESS in NLP panel
+   ================================================================ */
+function showProgress(msg){
+  document.getElementById('nlpResult').innerHTML=
+    `<div class="progress-msg"><span class="spin"></span>${msg}</div>`;
+  document.getElementById('nlpResult').style.display='block';
+  document.getElementById('nlpEmpty').style.display='none';
+}
+
+/* ================================================================
+   MAIN ANALYZE
+   ================================================================ */
+async function analyze(){
+  const text=currentText;
+  if(!text||text.length<5) return;
+  const btn=document.getElementById('btnAnalyze');
+  btn.disabled=true;
+  btn.innerHTML='<span class="spin"></span> Analiz...';
+  document.getElementById('sentStatus').textContent='Çalışıyor...';
+  document.getElementById('nlpEmpty').style.display='none';
+
+  try{
+    // Step 1 + 2 combined: Groq does translation + sentiment in one call
+    let analysisText=text, wasTranslated=false;
+    let scores;
+
+    if(cfg.groqKey){
+      showProgress('Groq LLM ile finansal sentiment analizi yapılıyor...');
+
+      const isTR = currentLang==='tr';
+      const systemPrompt = `Sen uzman bir finansal sentiment analisti ve Türk borsası uzmanısın.
+Verilen ${isTR?'Türkçe':'İngilizce'} finansal haber metnini analiz et.
+
+KURALLAR:
+- Tüm açıklamaları TÜRKÇE yaz
+- Metindeki anahtar finansal kavramları tespit et (faiz artışı/indirimi, kur, enflasyon, petrol vs.)
+- BIST hisseleri üzerindeki somut etkiyi açıkla
+- "reasoning" alanı için: hangi kelimeler/kavramlar bu kararı tetikledi, hangi sektör/hisseler etkilenir, düşüş mü artış mı beklenir — hepsini Türkçe yaz
+${isTR?'- Metni içsel olarak Türkçe analiz et, İngilizce çeviriye gerek yok':''}
+
+YALNIZCA şu JSON formatını döndür:
+{
+  "positive": <0-1 arası ondalık>,
+  "negative": <0-1 arası ondalık>,
+  "neutral": <0-1 arası ondalık>,
+  "translation": "${isTR?'boş bırak — Türkçe metin':'empty'}",
+  "reasoning": "<Türkçe: Hangi kavramlar tespit edildi, hangi sektörler etkilenir, neden bu sentiment kararı verildi — 3-4 cümle>"
+}
+Üç skor toplamı 1.0 olmalı. Finansal etki analizi odaklı ol.`;
+
+      const raw = await groqPost([
+        {role:'system', content: systemPrompt},
+        {role:'user',   content: 'Analyze this text: '+text}
+      ]);
+
+      if(!raw) throw new Error('Groq yanıt vermedi');
+      let parsed;
+      try{ parsed=JSON.parse(raw); }
+      catch(e){ throw new Error('Groq yanıtı parse edilemedi: '+raw.slice(0,120)); }
+
+      scores={
+        positive: Math.min(1, Math.max(0, parseFloat(parsed.positive)||0)),
+        negative: Math.min(1, Math.max(0, parseFloat(parsed.negative)||0)),
+        neutral:  Math.min(1, Math.max(0, parseFloat(parsed.neutral)||0)),
+      };
+      // normalize to sum=1
+      const sum=scores.positive+scores.negative+scores.neutral||1;
+      scores.positive/=sum; scores.negative/=sum; scores.neutral/=sum;
+
+      if(isTR && parsed.translation && parsed.translation.length>10){
+        analysisText=parsed.translation;
+        wasTranslated=true;
+      }
+      // store groq reasoning for display
+      window._lastGroqReasoning = parsed.reasoning||'';
+
+    } else {
+      showProgress('Demo mod: kural tabanlı lexicon analizi yapılıyor...');
+      scores=demoSentiment(text);
+      window._lastGroqReasoning='';
+    }
+
+    // Step 3: Sector + stock detection
+    const sectors=detectSectors(text+' '+(wasTranslated?analysisText:''));
+    const label=Object.entries(scores).sort((a,b)=>b[1]-a[1])[0][0];
+
+    // Step 4: Render deep analysis
+    const impactStocks=renderDeepAnalysis(text, analysisText, wasTranslated, label, scores, sectors);
+
+    // Step 5: Apply sim drift
+    activeAffected=impactStocks;
+    applyStockHighlights(impactStocks, label);
+
+    analysisCount++;
+    addHistory(text, label, scores[label], impactStocks);
+    document.getElementById('sentStatus').textContent=label.toUpperCase()+' '+Math.round(scores[label]*100)+'%';
+    toast('Analiz tamamlandı ✓','ok');
+
+  }catch(e){
+    const isAuth=e.message.includes('401')||e.message.includes('403');
+    const isTimeout=e.message.includes('zaman aşımı');
+    document.getElementById('nlpResult').innerHTML=`
+      <div style="padding:14px">
+        <div style="color:var(--neg);font-size:11px;font-weight:600;margin-bottom:8px">
+          ${isAuth?'🔑 API Anahtarı Hatası':isTimeout?'⏳ Zaman Aşımı':'⚠ Analiz Hatası'}
+        </div>
+        <div style="font-size:10px;color:var(--text);line-height:1.7;background:var(--bg2);padding:9px;border-radius:2px;border:1px solid var(--border)">
+          ${e.message}
+        </div>
+        ${isAuth?'<div style="font-size:9px;color:var(--text2);margin-top:8px">⚙ Ayarlar\'dan API anahtarını güncelleyin.</div>':''}
+        ${isTimeout?'<div style="font-size:9px;color:var(--text2);margin-top:8px">HuggingFace ücretsiz tier modeli soğuk başlatıyor. 2-3 dk bekleyip tekrar deneyin.</div>':''}
+      </div>`;
+    document.getElementById('sentStatus').textContent='HATA';
+    toast('Hata: '+e.message.slice(0,55),'err');
+  }finally{
+    btn.disabled=false;btn.innerHTML='<span>▶</span> Analiz Et';
+  }
+}
+
+/* ================================================================
+   DEEP ANALYSIS RENDER
+   ================================================================ */
+function renderDeepAnalysis(origText, enText, wasTranslated, label, scores, sectors){
+  const pos=scores.positive||0, neg=scores.negative||0, neu=scores.neutral||0;
+  const mainScore=scores[label]||0;
+  const isPos=label==='positive', isNeg=label==='negative', isNeu=label==='neutral';
+
+  // Verdict text
+  // Use Groq's own reasoning if available, otherwise fallback text
+  const groqReasoning = window._lastGroqReasoning || '';
+  const verdicts={
+    positive: groqReasoning || `Metin piyasa açısından ${Math.round(mainScore*100) > 75 ? 'güçlü biçimde' : 'temkinli'} olumlu sinyal içeriyor. Yatırımcı güvenini artırabilecek, alım baskısı yaratma potansiyeli taşıyan bir anlatı.`,
+    negative: groqReasoning || `Metin piyasa açısından ${Math.round(mainScore*100) > 75 ? 'belirgin biçimde' : 'hafifçe'} olumsuz sinyal içeriyor. Risk iştahını düşürebilecek, satış baskısı ve savunmacı pozisyon alma potansiyeli taşıyan bir anlatı.`,
+    neutral:  groqReasoning || `Metin dengeli veya belirsiz bir sinyal içeriyor. Piyasa üzerindeki etkisi bağlama ve yatırımcı yorumuna göre farklılaşabilir. Dikkatli izleme gerektirir.`,
+  };
+
+  // Key phrases extraction
+  const keyPhrases=extractKeyPhrases(origText, label);
+
+  // Critical factors
+  const criticalFactors=buildCriticalFactors(sectors, label, scores);
+
+  // Affected stocks with reasoning
+  const affectedStocks=buildAffectedStocks(sectors, label, scores);
+
+  // Risk level
+  const riskLevel=mainScore>0.80?'high':mainScore>0.55?'medium':'low';
+  const confLabel=mainScore>0.75?'Yüksek güven':mainScore>0.50?'Orta güven':'Düşük güven';
+
+  const html=`
+  <!-- SENTIMENT HERO -->
+  <div class="sent-hero" style="margin:12px">
+    <div class="sent-hero-bar bar-${isPos?'pos':isNeg?'neg':'neu'}"></div>
+    <div class="sent-hero-body">
+      <div class="sent-score-big ssb-${isPos?'pos':isNeg?'neg':'neu'}">
+        <div class="ssb-num">${Math.round(mainScore*100)}</div>
+        <div class="ssb-lbl">${isPos?'POZİTİF':isNeg?'NEGATİF':'NÖTR'}</div>
+      </div>
+      <div class="sent-hero-right">
+        <div class="sent-label-big sl-${isPos?'pos':isNeg?'neg':'neu'}">
+          ${isPos?'Piyasa Olumlu':isNeg?'Piyasa Olumsuz':'Piyasa Nötr'}
+        </div>
+        <div class="sent-verdict">${verdicts[label]}</div>
+        <div class="tri-bars">
+          ${['positive','negative','neutral'].map(k=>`
+          <div class="tri-row">
+            <div class="tri-lbl">${k==='positive'?'POZİTİF':k==='negative'?'NEGATİF':'NÖTR'}</div>
+            <div class="tri-track"><div class="tri-fill tf-${k==='positive'?'pos':k==='negative'?'neg':'neu'}" style="width:${Math.round((scores[k]||0)*100)}%"></div></div>
+            <div class="tri-val">${Math.round((scores[k]||0)*100)}%</div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  ${wasTranslated?`
+  <div class="deep-section">
+    <div class="ds-head"><span class="ds-title">Çevirilen Metin (İç Analiz)</span><span class="ds-badge" style="color:var(--pos);border:1px solid rgba(34,201,135,.2);background:rgba(34,201,135,.07)">TR → EN</span></div>
+    <div class="ds-body" style="font-size:10px;color:var(--text);line-height:1.6;font-style:italic">"${enText}"</div>
+  </div>`:''}
+
+  <!-- CATEGORY BREAKDOWN -->
+  ${buildCategoryBreakdown(sectors, label, scores)}
+
+  <!-- KEY PHRASES -->
+  <div class="deep-section">
+    <div class="ds-head">
+      <span class="ds-title">Tespit Edilen Sinyal Kelimeleri</span>
+      <span class="ds-badge" style="background:rgba(59,158,255,.08);color:var(--accent);border:1px solid rgba(59,158,255,.2)">${keyPhrases.length} kelime</span>
+    </div>
+    <div class="ds-body">
+      <div class="kp-grid">${keyPhrases.map(k=>`<span class="kp-tag kp-${k.type}">${k.word}</span>`).join('')}</div>
+      ${keyPhrases.length===0?'<div style="font-size:9px;color:var(--text2)">Belirgin sinyal kelimesi tespit edilmedi</div>':''}
+    </div>
+  </div>
+
+  <!-- CRITICAL FACTORS -->
+  <div class="deep-section">
+    <div class="ds-head">
+      <span class="ds-title">Kritik Faktörler ve Gerekçe</span>
+      <span class="ds-badge ${riskLevel==='high'?'risk-high':riskLevel==='medium'?'risk-med':'risk-low'}" style="padding:2px 6px;border-radius:2px;font-size:8px">
+        ${riskLevel==='high'?'⚑ YÜKSEK RİSK':riskLevel==='medium'?'◈ ORTA RİSK':'● DÜŞÜK RİSK'}
+      </span>
+    </div>
+    <div class="ds-body">
+      <div class="cf-list">${criticalFactors.map(f=>`
+        <div class="cf-item">
+          <div class="cf-icon">${f.icon}</div>
+          <div class="cf-text">${f.text}</div>
+        </div>`).join('')}
+      </div>
+      <div class="conf-gauge-wrap">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:9px;color:var(--text2);letter-spacing:.5px">MODEL GÜVENİ</span>
+          <span style="font-size:9px;color:var(--bright)">${confLabel} — ${Math.round(mainScore*100)}%</span>
+        </div>
+        <div class="conf-gauge">
+          <div class="conf-gauge-fill conf-${riskLevel==='low'&&isNeu?'mid':mainScore>.65?'high':'mid'}" style="width:${Math.round(mainScore*100)}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTOR + STOCK IMPACT -->
+  <div class="deep-section">
+    <div class="ds-head">
+      <span class="ds-title">Sektör & Hisse Etkisi</span>
+      <span class="ds-badge" style="background:rgba(157,122,240,.1);color:var(--purple);border:1px solid rgba(157,122,240,.2)">${affectedStocks.length} hisse etkilendi</span>
+    </div>
+    <div class="ds-body">
+      ${affectedStocks.length?affectedStocks.map(a=>`
+        <div class="ir-card">
+          <div class="ir-top">
+            <span class="ir-sym">${a.sym}</span>
+            <span class="ir-sector">${a.sectorLabel}</span>
+            <span class="ir-dir ${a.direction>0?'ir-up':a.direction<0?'ir-down':'ir-flat'}">
+              ${a.dirLabel||( a.direction>0?'↑ Artış Beklenir':a.direction<0?'↓ Düşüş Beklenir':'→ Nötr İzle')}
+            </span>
+          </div>
+          <div class="ir-why">${a.reason}</div>
+          <div class="ir-conf">
+            <span class="ir-conf-lbl">ETKİ GÜCÜ</span>
+            <div class="ir-conf-bar"><div class="ir-conf-fill" style="width:${a.strength}%"></div></div>
+            <span class="ir-conf-val">${a.strength}%</span>
+          </div>
+        </div>`).join('')
+      :'<div style="font-size:10px;color:var(--text2)">Belirgin sektör etkisi tespit edilmedi — genel piyasa hareketi beklenir.</div>'}
+    </div>
+  </div>
+
+  <!-- MACRO RISKS -->
+  <div class="deep-section" style="margin-bottom:14px">
+    <div class="ds-head"><span class="ds-title">Makro Risk Faktörleri</span></div>
+    <div class="ds-body">
+      <div class="risk-row">
+        ${buildMacroRisks(sectors,label).map(r=>`<span class="risk-tag risk-${r.level}">
+          ${r.icon} ${r.label}
+        </span>`).join('')}
+      </div>
+    </div>
+  </div>
+  `;
+
+  document.getElementById('nlpResult').innerHTML=html;
+  document.getElementById('nlpResult').style.display='block';
+  document.getElementById('nlpEmpty').style.display='none';
+
+  return affectedStocks;
+}
+
+/* ================================================================
+   CATEGORY BREAKDOWN BUILDER
+   ================================================================ */
+function buildCategoryBreakdown(sectors, label, scores){
+  if(!sectors.length) return `
+    <div class="cat-block">
+      <div class="cat-block-head"><span class="cat-block-title">Kategori Analizi</span></div>
+      <div style="padding:10px 12px;font-size:10px;color:var(--text2)">Belirgin bir kategori tespit edilemedi — genel piyasa hareketi beklenir.</div>
+    </div>`;
+
+  const isPos = label==='positive';
+  const secMap={
+    banking:['GARAN','AKBNK','ISCTR'],rates:['GARAN','AKBNK','ISCTR'],finance:['GARAN','AKBNK','KCHOL'],
+    aviation:['THYAO'],tourism:['THYAO'],fuel:['THYAO','TUPRS'],
+    energy:['TUPRS'],oil:['TUPRS'],commodity:['TUPRS','EREGL'],
+    defense:['ASELS'],nato:['ASELS'],tech:['ASELS'],
+    steel:['EREGL'],metal:['EREGL'],
+    retail:['BIMAS','MGROS'],consumer:['BIMAS','MGROS'],inflation:['BIMAS','MGROS'],
+    holding:['KCHOL'],conglomerate:['KCHOL'],economy:['KCHOL'],
+    geopolitics:['KCHOL','GARAN','ASELS'],currency:['GARAN','AKBNK','KCHOL'],
+  };
+
+  // Etkili bir kategori var mı kontrol et
+  const topSectors = sectors.slice(0, 4);
+  const items = topSectors.map(s => {
+    const meta = SECTOR_META[s.sector] || {icon:'◈', label:s.sector, desc:'Sektör etkisi tespit edildi.'};
+    const relStocks = secMap[s.sector] || [];
+    const dir = isPos ? 'up' : label==='negative' ? 'dn' : 'fl';
+    const dirLabel = isPos ? '↑ Yükseliş' : label==='negative' ? '↓ Düşüş' : '→ İzle';
+    const strength = Math.min(100, s.score * 18 + 30);
+    // Tetikleyici kelimeler (metinde bulunanlar)
+    const triggerWords = s.hits.slice(0,5);
+
+    // Kategori bazlı açıklama — yön + neden
+    const catExplain = buildCatExplain(s.sector, label, s.hits);
+
+    return `
+    <div class="cat-item">
+      <div class="cat-row1">
+        <span class="cat-icon">${meta.icon}</span>
+        <span class="cat-name">${meta.label}</span>
+        <span class="cat-badge">${dirLabel}</span>
+      </div>
+      <div class="cat-triggers">
+        ${triggerWords.map(w=>`<span class="cat-trigger">${w}</span>`).join('')}
+      </div>
+      <div class="cat-why">${catExplain}</div>
+      <div class="cat-stocks-row">
+        ${relStocks.map(sym=>`<span class="cat-stock-tag cs-${dir}">${sym} ${isPos?'↑':label==='negative'?'↓':'→'}</span>`).join('')}
+      </div>
+      <div class="cat-score-bar"><div class="cat-score-fill" style="width:${strength}%"></div></div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="cat-block">
+    <div class="cat-block-head">
+      <span class="cat-block-title">Kategori & Hisse Etkisi</span>
+      <span style="font-size:8px;color:var(--accent);letter-spacing:.5px">${topSectors.length} kategori tespit edildi</span>
+    </div>
+    ${items}
+  </div>`;
+}
+
+function buildCatExplain(sector, label, hits){
+  const isPos=label==='positive', isNeg=label==='negative';
+  const explanations={
+    banking: {
+      positive:'Bankacılık sektörü için olumlu: Faiz indirimi beklentisi kredi talebini artırır, düşük fonlama maliyeti net faiz marjını genişletir. GARAN, AKBNK ve ISCTR değer kazanabilir.',
+      negative:'Bankacılık sektörü için olumsuz: Faiz artışı veya sıkılaşma kredi büyümesini frenler, fonlama maliyetini artırır ve NPL riskini yükseltir. Banka hisseleri baskı altında kalabilir.',
+      neutral:'Para politikası haberleri banka hisselerini doğrudan etkiler. Mevcut denge yönü için ek veri beklenmeli; faiz kararı açıklandığında net etki netleşecek.',
+    },
+    rates: {
+      positive:'Faiz indirimi kararı: Borçlanma maliyeti düşer, tüketim ve yatırım ivme kazanır. Bankacılık ve holding hisseleri için genellikle olumlu; tahvil fiyatları yükselir.',
+      negative:'Faiz artırımı kararı: Borçlanma maliyeti yükselir, tüketici harcaması yavaşlar, sabit getirili araçlardan kaçış artabilir. Yüksek borçlu şirketler daha fazla etkilenir.',
+      neutral:'Faiz kararı piyasa beklentisiyle örtüşüyor. "Beklenti dahilinde" açıklama genellikle nötr tepki yaratır; forward guidance yönlendiriciliği belirleyecek.',
+    },
+    energy:{
+      positive:'Enerji/petrol fiyatı yükseliyor: TUPRS rafinaj spread ve stok kazancından faydalanır. Petrol şirketleri yüksek fiyatla karlılık artışı yaşar.',
+      negative:'Enerji/petrol fiyatı düşüyor: Rafineride stok değer kaybı riski; THYAO için yakıt maliyet avantajı yaratabilir (ters etki).',
+      neutral:'Enerji piyasasında belirsizlik; OPEC kararı veya arz-talep dengesi netleştiğinde etki belirginleşecek.',
+    },
+    aviation:{
+      positive:'Havacılık talebi güçlü: THYAO yolcu sayısı ve doluluk artışından faydalanır; gelir büyümesi beklentisi güçlenebilir.',
+      negative:'Havacılık için baskı: Yüksek yakıt maliyeti veya talep düşüşü THYAO operasyonel marjını sıkıştırır.',
+      neutral:'Havacılık haberi yön için yetersiz; kapasite ve rezervasyon verisi takip edilmeli.',
+    },
+    defense:{
+      positive:'Savunma harcaması artıyor: NATO taahhütleri ve bütçe artışı ASELS için güçlü sipariş defteri ve ihracat geliri demek. Sektör katalizörü yüksek.',
+      negative:'Savunma bütçesi baskı altında; ancak ASELS in ihracat portföyü kısmen koruyucu işlev görür.',
+      neutral:'Savunma sanayi haberi izleme modunda; ihracat anlaşması veya bütçe kararı detayları belirleyici olacak.',
+    },
+    steel:{
+      positive:'Çelik talebi artıyor: Altyapı yatırımları ve inşaat aktivitesi EREGL satış hacmini ve fiyatlama gücünü destekler.',
+      negative:'Çelik fiyatları düşüyor veya talep zayıfladı: EREGL ihracat rekabetçiliği ve marjları baskı altında.',
+      neutral:'Çelik piyasası dengede; Çin üretim verisi ve inşaat talebi yön belirleyici.',
+    },
+    retail:{
+      positive:'Tüketici harcaması güçlü: BIMAS ve MGROS ciro büyümesi ve trafik artışından faydalanır.',
+      negative:'Enflasyon veya talep daralması: Reel satın alma gücü düşer; perakende cirosu nominal artsa da reel büyüme zayıflar.',
+      neutral:'Perakende için karma sinyal; sezon etkisi ve enflasyon seyri belirleyici.',
+    },
+    geopolitics:{
+      positive:'Jeopolitik gerilim azalıyor: Risk primi düşer, yabancı sermaye girişi canlanabilir, savunma hisseleri görece geri çekilebilir.',
+      negative:'Jeopolitik gerilim artıyor: Tüm endekste risk satışı beklenir; TL baskı altında, savunma hisseleri pozitif ayrışabilir.',
+      neutral:'Jeopolitik gelişme belirsiz; durum izlenmeli, portföy riskini azaltma düşünülebilir.',
+    },
+    inflation:{
+      positive:'Enflasyon düşüyor: Reel ücretler toparlanır, merkez bankası gevşeme için alan kazanır, tüketim canlanabilir.',
+      negative:'Enflasyon yüksek/yükseliyor: Reel tüketim baskılanır, faiz beklentisi yukarı çıkar, savunmacı hisseler (BIMAS) öne çıkabilir.',
+      neutral:'Enflasyon beklenti dahilinde; merkez bankası tepkisi için ek veri bekleniyor.',
+    },
+    currency:{
+      positive:'TL değer kazanıyor / kur sakinleşiyor: Döviz borcu olan şirketler için kur riski azalır; yabancı yatırımcı güveni toparlanabilir.',
+      negative:'TL değer kaybediyor: İthalat maliyetleri artıyor; döviz borcu yüksek şirketler kur zararı yazabilir.',
+      neutral:'Kur hareketleri sınırlı; dış kaynaklı şok riski izlenmeli.',
+    },
+    holding:{
+      positive:'Genel ekonomik iyimserlik: Holding portföyü birden fazla sektörden pozitif katkı alır; NAD (net aktif değer) büyümesi beklenir.',
+      negative:'Risk-off ortamı: Holding hisseleri konglomerat iskontosu nedeniyle piyasadan daha hızlı değer kaybedebilir.',
+      neutral:'Holding haberi sektörel bileşenlere göre değerlendirilmeli.',
+    },
+  };
+  const secExp = explanations[sector];
+  if(secExp) return secExp[label] || secExp.neutral || '';
+  const dir = isPos?'olumlu':isNeg?'olumsuz':'belirsiz';
+  return `"${hits.slice(0,3).join(', ')}" kavramları ${dir} sektörel sinyal taşıyor.`;
+}
+
+/* ================================================================
+   ANALYSIS HELPERS
+   ================================================================ */
+function extractKeyPhrases(text, label){
+  const t=text.toLowerCase();
+  const phrases=[];
+  const posKw=['growth','surge','rally','record','strong','positive','boost','recovery','expand','profit','gain','increase','higher','optimistic','improve','bullish','artış','yükseliş','büyüme','olumlu','rekor','güçlü'];
+  const negKw=['fall','drop','crash','crisis','risk','pressure','tension','negative','miss','cut','decline','loss','down','pessimistic','worsen','bearish','sanction','war','conflict','düşüş','kriz','risk','baskı','gerilim','kaygı','çatışma'];
+  const infoKw=['federal reserve','central bank','opec','nato','gdp','inflation','rate','merkez bankası','faiz','enflasyon','tcmb','brent','petrol','savunma'];
+  posKw.forEach(w=>{if(t.includes(w)) phrases.push({word:w,type:'pos'})});
+  negKw.forEach(w=>{if(t.includes(w)) phrases.push({word:w,type:'neg'})});
+  infoKw.forEach(w=>{if(t.includes(w)) phrases.push({word:w,type:'info'})});
+  // deduplicate, max 12
+  return [...new Map(phrases.map(p=>[p.word,p])).values()].slice(0,12);
+}
+
+function buildCriticalFactors(sectors, label, scores){
+  const factors=[];
+  const topSectors=sectors.slice(0,3).map(s=>s.sector);
+  const pos=scores.positive||0, neg=scores.negative||0;
+
+  if(label==='positive'){
+    factors.push({icon:'📈',text:`<strong>Pozitif sinyal baskın (${Math.round(pos*100)}%):</strong> Metin yatırımcı güvenini artırabilecek unsurlar içeriyor. Alım pozisyonları desteklenebilir.`});
+  } else if(label==='negative'){
+    factors.push({icon:'📉',text:`<strong>Negatif sinyal baskın (${Math.round(neg*100)}%):</strong> Metin risk iştahını azaltabilecek unsurlar taşıyor. Savunmacı pozisyon ve stop-loss seviyeleri gözden geçirilmeli.`});
+  } else {
+    factors.push({icon:'⚖',text:`<strong>Nötr sinyal (${Math.round((scores.neutral||0)*100)}%):</strong> Metin net bir yön vermemekte. Bekleme pozisyonu veya düşük hacimli işlemler tercih edilebilir.`});
+  }
+  if(topSectors.includes('banking')||topSectors.includes('rates')||topSectors.includes('finance')){
+    factors.push({icon:'🏦',text:'<strong>Bankacılık Riski:</strong> Faiz/para politikası sinyali bankacılık hisselerini doğrudan etkiler. Net faiz marjı ve kredi kalitesi üzerindeki baskı izlenmeli.'});
+  }
+  if(topSectors.includes('energy')||topSectors.includes('oil')||topSectors.includes('commodity')){
+    factors.push({icon:'⛽',text:'<strong>Emtia/Enerji Duyarlılığı:</strong> Enerji fiyatları hem rafineri karlılığını hem havacılık maliyetlerini ters yönde etkiler — sektör ayrışması beklenir.'});
+  }
+  if(topSectors.includes('defense')||topSectors.includes('nato')){
+    factors.push({icon:'🛡',text:'<strong>Savunma Katalizörü:</strong> NATO/savunma haberleri ASELS başta olmak üzere savunma sanayii hisselerinde güçlü pozitif reaksiyon yaratma eğilimindedir.'});
+  }
+  if(topSectors.includes('geopolitics')){
+    factors.push({icon:'🌍',text:'<strong>Jeopolitik Belirsizlik:</strong> Jeopolitik risk, holding ve banka hisselerinde küresel fon çıkışlarına yol açabilir; emtia ve savunma hisseleri pozitif ayrışabilir.'});
+  }
+  if(topSectors.includes('inflation')||topSectors.includes('retail')){
+    factors.push({icon:'🛒',text:'<strong>Tüketici / Enflasyon Etkisi:</strong> Yüksek enflasyon perakende cirolarını nominal artırır ancak reel marjları sıkıştırabilir. Defensive hisseler öne çıkabilir.'});
+  }
+  if(factors.length===1){
+    factors.push({icon:'🔍',text:'<strong>Genel Piyasa Etkisi:</strong> Belirgin bir sektör bağlantısı tespit edilemedi. Anlatının yarattığı genel risk duyarlılığı değişimi tüm endeksi etkileyebilir.'});
+  }
+  return factors.slice(0,4);
+}
+
+function buildAffectedStocks(sectors, label, scores){
+  const topSec=sectors.slice(0,4).map(s=>s.sector);
+  const mainScore=scores[label]||0;
+  const isPos=label==='positive';
+  const result=[];
+
+  const REASONS={
+    THYAO:{
+      pos:'Olumlu haber havacılık talebini destekleyebilir; yolcu sayısı artışı ve kapasite doluluk oranlarına yansıma beklenir.',
+      neg:'Yüksek yakıt maliyetleri veya talep düşüşü operasyonel karlılığı doğrudan baskı altına alır.',
+      oil_neg:'Petrol fiyatı artışı jet yakıt maliyetini %30-40 oranında etkileyebilir; operasyonel marj riski yüksek.',
+      oil_pos:'Petrol fiyatı düşüşü yakıt tasarrufu yaratır; THYAO için maliyet avantajı anlamına gelir.',
+    },
+    GARAN:{
+      pos:'Pozitif makro ortam kredi büyümesini destekler, temerrüt oranlarında azalma beklentisi oluşur.',
+      neg:'Risk iştahı azalması mevduat kaçışına ve fonlama maliyeti artışına yol açabilir.',
+      rate_neg:'Faiz artışı bankaların kısa vadeli fonlama maliyetini yükseltir; net faiz marjında kısa vadeli baskı.',
+      rate_pos:'Faiz indirimi beklentisi banka hisselerinde değerleme iyileşmesi yaratır.',
+    },
+    ASELS:{
+      pos:'Savunma harcaması artış haberleri ihracat geliri ve sipariş defteri büyümesine işaret eder.',
+      neg:'Genel piyasa satışlarında savunma hisseleri savunmacı özelliği nedeniyle görece dirençli kalabilir.',
+      nato_pos:'NATO savunma harcama artışı kararları ASELS\'in ihracat portföyünü güçlendiren kritik bir katalizördür.',
+    },
+    TUPRS:{
+      pos:'Küresel ekonomik aktivite artışı rafinaj talebi ve spread\'leri olumlu etkiler.',
+      neg:'Talep daralması rafinaj marjlarını sıkıştırır.',
+      oil_pos:'Yükselen ham petrol fiyatı stok kazancı ve ürün fiyatlama gücü yaratır.',
+      oil_neg:'Petrol düşüşü rafineride stok değer kayıplarına yol açabilir.',
+    },
+    EREGL:{
+      pos:'Altyapı yatırımları ve inşaat talebi çelik fiyatlarını destekler.',
+      neg:'Çelik fiyatı düşüşü ve talep daralması karlılığı olumsuz etkiler.',
+    },
+    BIMAS:{
+      pos:'Tüketici güveni artışı perakende cirosunu büyütür; BIMAS savunmacı özelliği ile ön plana çıkabilir.',
+      neg:'Enflasyon baskısı reel harcama gücünü kısar; stok maliyetleri artar.',
+    },
+    KCHOL:{
+      pos:'Genel ekonomik iyimserlik holdingin portföy değerlemesini artırır; çeşitli sektör pozitif ayrışması beklenir.',
+      neg:'Risk-off ortamında holding yapıları konglomerat iskontosu nedeniyle daha sert değer kaybedebilir.',
+    },
+    AKBNK:{pos:'Kredi büyümesi ve düşük risk maliyeti net faiz marjını destekler.',neg:'Artan kredi riski ve mevduat kaçışı bankanın fonlama yapısını baskı altına alır.'},
+    ISCTR:{pos:'Ekonomik büyüme kurumsal kredi talebini artırır; İş Bankası kurumsal portföyünden faydalanır.',neg:'Kredi kalitesi bozulması karşılık giderleri artırır.'},
+    MGROS:{pos:'Tüketici güveni ve harcama gücü artışı mağaza cirosunu destekler.',neg:'Enflasyon reel tüketimi baskılar; tedarik maliyetleri artar.'},
+  };
+
+  // map sectors → stocks
+  const secMap={
+    banking:['GARAN','AKBNK','ISCTR'],finance:['GARAN','AKBNK','KCHOL'],rates:['GARAN','AKBNK','ISCTR'],
+    aviation:['THYAO'],tourism:['THYAO'],fuel:['THYAO','TUPRS'],
+    energy:['TUPRS'],oil:['TUPRS','THYAO'],commodity:['TUPRS','EREGL'],
+    defense:['ASELS'],nato:['ASELS'],tech:['ASELS'],
+    steel:['EREGL'],metal:['EREGL'],
+    retail:['BIMAS','MGROS'],consumer:['BIMAS','MGROS'],inflation:['BIMAS','MGROS'],
+    holding:['KCHOL'],conglomerate:['KCHOL'],economy:['KCHOL'],geopolitics:['KCHOL','GARAN','ASELS'],
+  };
+
+  const symSet={};
+  topSec.forEach((sec,si)=>{
+    (secMap[sec]||[]).forEach(sym=>{
+      if(!symSet[sym]) symSet[sym]={sym,score:0,sectors:[]};
+      symSet[sym].score+=(sectors.find(s=>s.sector===sec)?.score||1)*(4-si);
+      symSet[sym].sectors.push(sec);
+    });
+  });
+
+  const sorted=Object.values(symSet).sort((a,b)=>b.score-a.score).slice(0,6);
+
+  sorted.forEach(item=>{
+    const st=STOCKS.find(s=>s.sym===item.sym);
+    if(!st) return;
+    // direction
+    let direction=isPos?1:label==='negative'?-1:0;
+    // special cases: oil negative → THYAO negative too
+    const hasOil=item.sectors.includes('oil')||item.sectors.includes('fuel')||item.sectors.includes('energy');
+    if(hasOil && item.sym==='THYAO' && label!=='positive') direction=-1;
+    if(hasOil && item.sym==='TUPRS' && label==='negative') direction=-1;
+    if(hasOil && item.sym==='TUPRS' && label==='positive') direction=1;
+
+    // reason lookup
+    const rKey=item.sectors[0];
+    const symReasons=REASONS[item.sym];
+    let reason='Genel piyasa sentiment hareketi ile paralel seyredilebilir.';
+    if(symReasons){
+      // try sector-specific reason first
+      const oilCase=hasOil&&(item.sym==='THYAO'||item.sym==='TUPRS');
+      const oilDir=isPos?'oil_pos':'oil_neg';
+      const natiCase=item.sectors.includes('nato')&&item.sym==='ASELS';
+      const rateCase=(item.sectors.includes('rates')||item.sectors.includes('banking'));
+      if(oilCase && symReasons[oilDir]) reason=symReasons[oilDir];
+      else if(natiCase && symReasons['nato_pos']) reason=symReasons['nato_pos'];
+      else if(rateCase && symReasons[isPos?'rate_pos':'rate_neg']) reason=symReasons[isPos?'rate_pos':'rate_neg'];
+      else reason=symReasons[isPos?'pos':'neg']||reason;
+    }
+
+    // sector label
+    const SLABELS={banking:'Bankacılık',finance:'Finans',rates:'Faiz Duyarlı',aviation:'Havacılık',tourism:'Turizm',energy:'Enerji',oil:'Petrol/Rafineri',commodity:'Emtia',defense:'Savunma Sanayi',nato:'NATO/Savunma',steel:'Demir-Çelik',retail:'Perakende',consumer:'Tüketici',inflation:'Enflasyon',holding:'Holding',conglomerate:'Çeşitlendirilmiş',geopolitics:'Jeopolitik',tech:'Teknoloji',fuel:'Yakıt Duyarlı',metal:'Metal'};
+    const sectorLabel=SLABELS[item.sectors[0]]||item.sectors[0];
+
+    const strength=Math.min(95,Math.round(mainScore*100*(0.6+Math.random()*.4)));
+
+    const dirLabel = direction>0 ? '↑ Artış Beklenir' : direction<0 ? '↓ Düşüş Beklenir' : '→ Nötr İzle';
+    result.push({sym:item.sym,sectorLabel,direction,reason,strength,dirLabel});
+  });
+
+  return result;
+}
+
+function buildMacroRisks(sectors, label){
+  const risks=[];
+  const secNames=sectors.map(s=>s.sector);
+  if(secNames.includes('geopolitics')||secNames.includes('defense')||secNames.includes('nato'))
+    risks.push({icon:'🌍',label:'Jeopolitik Risk',level:label==='negative'?'high':'med'});
+  if(secNames.includes('rates')||secNames.includes('banking')||secNames.includes('finance'))
+    risks.push({icon:'📊',label:'Faiz Riski',level:label==='negative'?'high':'med'});
+  if(secNames.includes('energy')||secNames.includes('oil')||secNames.includes('commodity'))
+    risks.push({icon:'⛽',label:'Emtia Volatilitesi',level:'med'});
+  if(secNames.includes('inflation')||secNames.includes('retail'))
+    risks.push({icon:'💹',label:'Enflasyon Riski',level:label==='negative'?'high':'med'});
+  if(secNames.includes('aviation')||secNames.includes('tourism'))
+    risks.push({icon:'✈',label:'Operasyonel Risk',level:'low'});
+  if(risks.length===0)
+    risks.push({icon:'📉',label:'Genel Piyasa',level:'low'},{icon:'🔄',label:'Likidite',level:'low'});
+  return risks.slice(0,5);
+}
+
+/* ================================================================
+   STOCK HIGHLIGHTS & SIM DRIFT
+   ================================================================ */
+function applyStockHighlights(affectedStocks, label){
+  // Update sim notice with analysis summary
+  const notice = document.getElementById('simNotice');
+  if(notice && affectedStocks.length){
+    const rising  = affectedStocks.filter(a=>a.direction>0).map(a=>a.sym);
+    const falling = affectedStocks.filter(a=>a.direction<0).map(a=>a.sym);
+    let noticeHtml = `<strong style="color:var(--accent)">NLP Kararı Uygulandı:</strong> `;
+    if(rising.length)  noticeHtml += `<span style="color:var(--pos)">↑ Artış: ${rising.join(', ')}</span>  `;
+    if(falling.length) noticeHtml += `<span style="color:var(--neg)">↓ Düşüş: ${falling.join(', ')}</span>`;
+    notice.innerHTML = noticeHtml;
+  }
+
+  STOCKS.forEach(s=>{
+    const card = document.getElementById('sc-'+s.sym);
+    const note = document.getElementById('sn-'+s.sym);
+    if(!card||!note) return;
+    const aff = affectedStocks.find(a=>a.sym===s.sym);
+    if(aff){
+      card.className = 'stock-card affected '+(aff.direction>0?'rising':'falling');
+      note.className  = 'sc-impact-note show '+(aff.direction>0?'sc-up-note':'sc-dn-note');
+      if(aff.direction>0){
+        note.innerHTML = `<strong>↑ ARTIŞ BEKLENİYOR</strong> — ${aff.sectorLabel} etkisi`;
+      } else if(aff.direction<0){
+        note.innerHTML = `<strong>↓ DÜŞÜŞ BEKLENİYOR</strong> — ${aff.sectorLabel} etkisi`;
+      } else {
+        note.innerHTML = `<strong>→ NÖTR İZLE</strong> — ${aff.sectorLabel}`;
+      }
+    } else {
+      card.className = 'stock-card';
+      note.className = 'sc-impact-note';
+      note.innerHTML = '';
+    }
+  });
+}
+
+/* ================================================================
+   HISTORY
+   ================================================================ */
+function addHistory(text, label, score, affStocks){
+  history.unshift({time:new Date().toLocaleTimeString('tr-TR'),text,label,score,affStocks});
+  if(history.length>10) history.pop();
+  renderHistory();
+}
+function renderHistory(){
+  const sec=document.getElementById('histSection');
+  const body=document.getElementById('histBody');
+  const cnt=document.getElementById('histCount');
+  sec.style.display=history.length?'block':'none';
+  cnt.textContent=history.length;
+  body.innerHTML=history.slice(0,6).map((h,i)=>`
+    <div class="hist-item ${h.label==='positive'?'pos-h':h.label==='negative'?'neg-h':'neu-h'}" onclick="reloadHist(${i})">
+      <div class="hist-time">${h.time}</div>
+      <div class="hist-snip">${h.text.slice(0,80)}</div>
+      <div class="hist-tags">
+        <span class="h-tag ht-${h.label==='positive'?'pos':h.label==='negative'?'neg':'neu'}">${h.label.toUpperCase()} ${Math.round(h.score*100)}%</span>
+        ${h.affStocks.slice(0,3).map(a=>`<span class="h-tag" style="background:rgba(157,122,240,.1);color:var(--purple)">${a.sym}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+function reloadHist(i){
+  const h=history[i];
+  document.getElementById('manualText').value=h.text;
+  currentText=h.text; onTextInput(); switchTab('manual');
+  toast('Geçmiş yüklendi','inf');
+}
+function toggleHist(){
+  const b=document.getElementById('histBody');
+  b.style.display=b.style.display==='none'?'flex':'none';
+}
+
+/* ================================================================
+   SETTINGS MODAL
+   ================================================================ */
+function openSettings(){
+  document.getElementById('hfKeyInput').value=cfg.groqKey;
+  document.getElementById('simSpeed').value=cfg.simSpeedMs;
+  const ks=document.getElementById('keyStatus');
+  ks.textContent=cfg.groqKey?'✓ Aktif: '+cfg.groqKey.slice(0,10)+'...':'✗ Girilmedi';
+  ks.style.color=cfg.groqKey?'var(--pos)':'var(--neg)';
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeSettings(){document.getElementById('modalBg').classList.remove('open')}
+function saveSettings(){
+  cfg.groqKey=document.getElementById('hfKeyInput').value.trim();
+  cfg.simSpeedMs=parseInt(document.getElementById('simSpeed').value)||6000;
+  startSim(); checkKeyWarn(); closeSettings();
+  toast(cfg.groqKey?'Groq API anahtarı kaydedildi ✓':'Ayarlar kaydedildi (demo mod)','ok');
+}
+function checkKeyWarn(){
+  document.getElementById('noKeyBar').style.display=
+    (cfg.groqKey&&cfg.groqKey.length>10)?'none':'flex';
+}
+document.getElementById('modalBg').onclick=e=>{if(e.target===document.getElementById('modalBg'))closeSettings()};
+
+/* ================================================================
+   TOAST
+   ================================================================ */
+function toast(msg,type='inf'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast '+type;
+  void el.offsetWidth;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),3200);
+}
+</script>
+</body>
+</html>
